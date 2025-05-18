@@ -5,6 +5,7 @@ SetWorkingDir %A_ScriptDir%
 
 ; 최근 사용된 문자 배열 초기화 (최대 5개 저장)
 global recentSymbols := []
+global vButton0, vButton1, vButton2, vButton3, vButton4, vButton5, vButton6, vButton7, vButton8, vButton9, vButton10, vButton11, vButton12, vButton13, vButton14, vButton15
 
 ; Alt+G를 누르면 그리스 문자 메뉴 표시
 !g::
