@@ -1,2 +1,2 @@
 Greek letters & Mathematical Symbols
-![image](https://github.com/user-attachments/assets/011e299c-c9c9-492b-af01-84d8b5087f4c)
+![image](https://github.com/user-attachments/assets/6f99519d-6697-4497-a019-76061fe7e40b)
