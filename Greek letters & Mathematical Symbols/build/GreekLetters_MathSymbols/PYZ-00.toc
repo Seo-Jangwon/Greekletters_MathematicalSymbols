@@ -1,4 +1,6 @@
-('C:\\Users\\seoja\\OneDrive\\Desktop\\GreekLetter\\build\\GreekLetters_MathSymbols\\PYZ-00.pyz',
+('C:\\Users\\seoja\\OneDrive\\Desktop\\MyTools\\Greek letters & Mathematical '
+ 'Symbols\\Greek letters & Mathematical '
+ 'Symbols\\build\\GreekLetters_MathSymbols\\PYZ-00.pyz',
  [('PyQt5',
    'C:\\Users\\seoja\\AppData\\Roaming\\Python\\Python312\\site-packages\\PyQt5\\__init__.py',
    'PYMODULE'),
