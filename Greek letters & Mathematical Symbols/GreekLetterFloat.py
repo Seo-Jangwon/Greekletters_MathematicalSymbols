@@ -1,5 +1,7 @@
 import os
 import sys
+import json
+from pathlib import Path
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -18,9 +20,18 @@ from PyQt5.QtWidgets import (
     QLayout,
     QToolTip,
 )
-from PyQt5.QtCore import QTimer, Qt, QPoint, QSize, pyqtSignal, QRect
-from PyQt5.QtGui import QFont, QClipboard, QResizeEvent, QPainter, QBrush, QPen, QColor
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QTimer, Qt, QPoint, QSize, pyqtSignal, QRect, QMimeData
+from PyQt5.QtGui import (
+    QFont,
+    QClipboard,
+    QResizeEvent,
+    QPainter,
+    QBrush,
+    QPen,
+    QColor,
+    QDrag,
+    QIcon,
+)
 
 
 def get_resource_path(relative_path):
@@ -43,6 +54,8 @@ SCALE_LIMITS = {
     "max_padding": 8,
     "recent_scroll_ratio": 0.3,
     "max_recent_items": 15,
+    "favorites_scroll_ratio": 0.25,
+    "max_favorites": 1000,
 }
 
 WINDOW_SETTINGS = {
@@ -181,6 +194,83 @@ class QFlowLayout(QLayout):
         return y + lineHeight - rect.y() + bottom
 
 
+class DraggableButton(QPushButton):
+    def __init__(self, text, symbol_data, parent=None, is_favorite=False):
+        super().__init__(text, parent)
+        self.symbol_data = symbol_data  # (symbol, latex, name)
+        self.drag_start_position = None
+        self.is_favorite = is_favorite
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.drag_start_position = event.pos()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if not (event.buttons() & Qt.LeftButton):
+            return
+        if not self.drag_start_position:
+            return
+        if (
+            event.pos() - self.drag_start_position
+        ).manhattanLength() < QApplication.startDragDistance():
+            return
+
+        # 드래그 시작
+        drag = QDrag(self)
+        mimeData = QMimeData()
+        drag_data = {
+            "symbol_data": self.symbol_data,
+            "source": "favorites" if self.is_favorite else "recent",
+        }
+        mimeData.setText(json.dumps(drag_data))
+        drag.setMimeData(mimeData)
+
+        # 드래그 효과 설정
+        if self.is_favorite:
+            drag.exec_(Qt.MoveAction)  # 즐겨찾기 내부는 이동
+        else:
+            drag.exec_(Qt.CopyAction)  # 최근사용에서는 복사
+
+
+class FavoritesDropZone(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.parent_app = parent
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.accept()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasText():
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        try:
+            drag_data = json.loads(event.mimeData().text())
+            symbol_data = drag_data["symbol_data"]
+            source = drag_data["source"]
+
+            if source == "recent":
+                # 최근 사용에서 드래그: 즐겨찾기에 추가
+                self.parent_app.add_to_favorites(*symbol_data)
+            elif source == "favorites":
+                # 즐겨찾기 내부 드래그: 순서 변경
+                drop_pos = event.pos()
+                self.parent_app.reorder_favorites(symbol_data, drop_pos)
+
+            event.accept()
+        except Exception as e:
+            print(f"Drop event error: {e}")
+            event.ignore()
+
+
 class ToggleSwitch(QPushButton):
     """커스텀 토글 스위치 버튼"""
 
@@ -242,14 +332,26 @@ class SymbolApp(QMainWindow):
 
         # 최근 사용된 문자 배열 초기화
         self.recent_symbols = []
+        # 즐겨찾기 배열 초기화
+        self.favorites = []
+        # 즐겨찾기 접기/펼치기 상태
+        self.favorites_collapsed = True
 
         # LaTeX 모드 여부
         self.latex_mode = False
 
         # 다크 모드 여부 (기본값은 라이트 모드)
         self.is_dark_mode = False
+
+        # 설정 파일 경로 초기화
+        self.config_file = os.path.join(self.get_config_dir(), 'settings.json')
+        
+        # 설정 불러오기 (UI 생성 전에)
+        self.load_settings()
+        
+        # 테마 전역 변수 설정 (UI 생성 전에)
         global THEME
-        THEME = LIGHT_THEME
+        THEME = DARK_THEME if self.is_dark_mode else LIGHT_THEME
 
         # 폰트 설정
         self.default_font_family = self.get_available_font(
@@ -262,11 +364,22 @@ class SymbolApp(QMainWindow):
         # UI 컴포넌트 저장용
         self.category_buttons = []
 
+        # UI 생성
         self.init_ui()
+
+        # 테마 적용 (UI 생성 후)
+        self.apply_theme()
+        self.apply_theme_to_all_components()
 
         # 초기 리사이즈 이벤트 강제 발생
         self.calculate_scale_factor()
         self.on_resize()
+
+        # 반응형 디자인을 위한 이벤트 연결
+        self.resized.connect(self.on_resize)
+
+        # 초기 상태 설정
+        self.is_always_on_top = False
 
     def get_category_color(self, index):
         """카테고리 인덱스에 따른 강조색 반환"""
@@ -426,6 +539,8 @@ class SymbolApp(QMainWindow):
         self.create_output_mode_section()
         self.create_recent_section()
         self.create_separator()
+        self.create_favorites_section()
+        self.create_separator()
         self.create_category_buttons()
         self.create_status_bar()
 
@@ -441,6 +556,56 @@ class SymbolApp(QMainWindow):
 
         # 초기 상태 설정
         self.is_always_on_top = False
+        
+        if self.latex_mode:
+            self.latex_mode_radio.setChecked(True)
+        else:
+            self.regular_mode_radio.setChecked(True)
+
+    def get_config_dir(self):
+        """설정 파일 디렉토리 경로 반환"""
+        if os.name == "nt":
+            config_dir = os.path.join(os.environ["APPDATA"], "GreekLetterFloat")
+        else:
+            config_dir = os.path.join(os.path.expanduser("~"), ".greekletterfloat")
+
+        Path(config_dir).mkdir(exist_ok=True)
+        return config_dir
+
+    def save_settings(self):
+        """설정을 JSON 파일로 저장"""
+        settings = {
+            "favorites": self.favorites,
+            'favorites_collapsed': self.favorites_collapsed,
+            "recent_symbols": self.recent_symbols,
+            "is_dark_mode": self.is_dark_mode,
+            "always_on_top": self.is_always_on_top,
+            "latex_mode": self.latex_mode,
+            "window_size": [self.width(), self.height()],
+        }
+
+        try:
+            with open(self.config_file, "w", encoding="utf-8") as f:
+                json.dump(settings, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"설정 저장 실패: {e}")
+
+    def load_settings(self):
+        """JSON 파일에서 설정 불러오기"""
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+                
+                self.favorites = settings.get('favorites', [])
+                self.favorites_collapsed = settings.get('favorites_collapsed', True)
+                self.recent_symbols = settings.get('recent_symbols', [])
+                self.is_dark_mode = settings.get('is_dark_mode', False)
+                self.is_always_on_top = settings.get('always_on_top', False)
+                self.latex_mode = settings.get('latex_mode', False)
+                
+        except Exception as e:
+            print(f"설정 불러오기 실패: {e}")
 
     def create_output_mode_section(self):
         """출력 모드 선택 영역 생성"""
@@ -475,7 +640,7 @@ class SymbolApp(QMainWindow):
         layout.addStretch()
 
         # 설정 버튼
-        self.settings_button = QPushButton("⚙️")
+        self.settings_button = QPushButton("⛯")
         self.settings_button.setFixedSize(30, 30)
         self.settings_button.setToolTip("Settings")
         self.settings_button.clicked.connect(self.show_settings_menu)
@@ -710,6 +875,315 @@ class SymbolApp(QMainWindow):
         layout.addWidget(self.scroll_area)
         self.main_layout.addWidget(container)
 
+    def create_favorites_section(self):
+        """즐겨찾기 섹션 생성"""
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 5, 0, 5)
+
+        # 즐겨찾기 헤더 (라벨 + 접기/펼치기 버튼)
+        header_container = QWidget()
+        header_layout = QHBoxLayout(header_container)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(5)
+
+        # 즐겨찾기 라벨
+        self.favorites_label = QLabel("Favorites:")
+        self.favorites_label.setFont(QFont(self.default_font_family, 10, QFont.Bold))
+        self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
+        header_layout.addWidget(self.favorites_label)
+
+        # 접기/펼치기 버튼
+        self.favorites_toggle_button = QPushButton(
+            "▼" if not self.favorites_collapsed else "▶"
+        )
+        self.favorites_toggle_button.setFixedSize(20, 20)
+        self.favorites_toggle_button.setStyleSheet(
+            f"""
+            QPushButton {{
+                background: transparent;
+                border: none;
+                color: {THEME['foreground']};
+                font-size: 12px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                color: {THEME['accent2']};
+            }}
+        """
+        )
+        self.favorites_toggle_button.clicked.connect(self.toggle_favorites_section)
+        header_layout.addWidget(self.favorites_toggle_button)
+
+        header_layout.addStretch()
+        layout.addWidget(header_container)
+
+        # 스크롤 영역 생성 (노란 배경, 스크롤 가능)
+        self.favorites_scroll = QScrollArea()
+        self.favorites_scroll.setWidgetResizable(True)
+        self.favorites_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.favorites_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.favorites_scroll.setFrameShape(QFrame.StyledPanel)
+
+        # 스크롤 영역 내부 위젯 생성 (드롭 존)
+        self.favorites_container = FavoritesDropZone(self)
+        self.favorites_layout = QFlowLayout(self.favorites_container)
+        self.favorites_layout.setContentsMargins(3, 3, 3, 3)
+
+        self.favorites_scroll.setWidget(self.favorites_container)
+
+        # 초기 높이 설정
+        self.update_favorites_scroll_height()
+
+        # 초기 접기/펼치기 상태 적용
+        self.favorites_scroll.setVisible(not self.favorites_collapsed)
+
+        layout.addWidget(self.favorites_scroll)
+        self.main_layout.addWidget(container)
+
+        # 초기 즐겨찾기 표시
+        self.update_favorites_display()
+
+    def toggle_favorites_section(self):
+        """즐겨찾기 섹션 접기/펼치기"""
+        self.favorites_collapsed = not self.favorites_collapsed
+
+        # 버튼 아이콘 변경
+        self.favorites_toggle_button.setText("▶" if self.favorites_collapsed else "▼")
+
+        # 스크롤 영역 보이기/숨기기
+        self.favorites_scroll.setVisible(not self.favorites_collapsed)
+
+        # 설정 저장
+        self.save_settings()
+
+        # 상태 메시지
+        state = "collapsed" if self.favorites_collapsed else "expanded"
+        self.statusBar().showMessage(f"Favorites section {state}", 1000)
+
+    def update_favorites_scroll_height(self):
+        """창 크기에 따라 즐겨찾기 스크롤 영역 높이 업데이트"""
+        new_height = int(self.height() * SCALE_LIMITS["favorites_scroll_ratio"])
+        new_height = max(100, min(200, new_height))
+        self.favorites_scroll.setMaximumHeight(new_height)
+
+    def update_favorites_scroll_style(self):
+        """즐겨찾기 스크롤 영역 스타일 업데이트"""
+        yellow_bg = "#fffacd" if not self.is_dark_mode else "#3a3a2a"
+        yellow_border = "#daa520" if not self.is_dark_mode else "#8b7500"
+
+        style = f"""
+            QScrollArea {{
+                border: 1px solid {yellow_border};
+                border-radius: 4px;
+                background-color: {yellow_bg};
+            }}
+            QScrollBar:vertical {{
+                border: none;
+                background: {THEME['dark_bg']};
+                width: 8px;
+                margin: 0px;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {THEME['button_border']};
+                min-height: 20px;
+                border-radius: 4px;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+        """
+
+        self.favorites_scroll.setStyleSheet(style)
+        self.favorites_container.setStyleSheet(f"background-color: {yellow_bg};")
+
+    def is_favorited(self, symbol):
+        """심볼이 즐겨찾기에 있는지 확인"""
+        return any(fav[0] == symbol for fav in self.favorites)
+
+    def add_to_favorites(self, symbol, latex, name):
+        """즐겨찾기에 추가 (중복 방지, 최대 개수 제한)"""
+        # 이미 존재하는지 확인
+        if self.is_favorited(symbol):
+            self.statusBar().showMessage(f"'{symbol}' is already in favorites", 2000)
+            return
+
+        # 최대 개수 확인
+        if len(self.favorites) >= SCALE_LIMITS["max_favorites"]:
+            self.statusBar().showMessage(
+                f"Favorites limit reached ({SCALE_LIMITS['max_favorites']})", 3000
+            )
+            return
+
+        self.favorites.append([symbol, latex, name])
+        self.update_favorites_display()
+        self.save_settings()
+        self.statusBar().showMessage(
+            f"Added '{symbol}' to favorites ({len(self.favorites)}/{SCALE_LIMITS['max_favorites']})",
+            2000,
+        )
+
+    def remove_from_favorites(self, symbol):
+        """즐겨찾기에서 제거"""
+        self.favorites = [fav for fav in self.favorites if fav[0] != symbol]
+        self.update_favorites_display()
+        self.save_settings()
+        self.statusBar().showMessage(f"Removed '{symbol}' from favorites", 2000)
+
+    def reorder_favorites(self, symbol_data, drop_pos):
+        """즐겨찾기 내부 순서 변경"""
+        # 기존 위치에서 제거
+        symbol = symbol_data[0]
+        item_to_move = None
+        for i, fav in enumerate(self.favorites):
+            if fav[0] == symbol:
+                item_to_move = self.favorites.pop(i)
+                break
+
+        if not item_to_move:
+            return
+
+        # 드롭 위치 계산
+        drop_index = self.calculate_drop_index(drop_pos)
+
+        # 새 위치에 삽입
+        self.favorites.insert(drop_index, item_to_move)
+        self.update_favorites_display()
+        self.save_settings()
+
+    def calculate_drop_index(self, drop_pos):
+        """드롭 위치를 기반으로 삽입 인덱스 계산"""
+        # 간단한 구현: 버튼들의 위치를 비교하여 적절한 인덱스 반환
+        button_positions = []
+        for i in range(self.favorites_layout.count()):
+            item = self.favorites_layout.itemAt(i)
+            if item and item.widget():
+                widget = item.widget()
+                if isinstance(widget, DraggableButton):
+                    pos = widget.pos()
+                    button_positions.append(
+                        (i, pos.x() + pos.y() * 1000)
+                    )  # 간단한 위치 계산
+
+        # 드롭 위치와 가장 가까운 버튼 찾기
+        drop_score = drop_pos.x() + drop_pos.y() * 1000
+
+        for i, (idx, pos) in enumerate(button_positions):
+            if drop_score < pos:
+                return i
+
+        return len(self.favorites)
+
+    def update_favorites_display(self):
+        """즐겨찾기 표시 업데이트"""
+        # 기존 버튼 제거
+        for i in range(self.favorites_layout.count()):
+            item = self.favorites_layout.takeAt(0)
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+                self.favorites_layout.removeItem(item)
+
+        # 즐겨찾기가 없으면 빈 라벨 추가
+        if not self.favorites:
+            empty_label = QLabel("Drag symbols here or click ★ to add favorites")
+            empty_label.setStyleSheet(f"color: {THEME['foreground']}; font-style: italic;")
+            empty_label.setAlignment(Qt.AlignCenter)
+            empty_label.setWordWrap(True)
+            self.favorites_layout.addWidget(empty_label)
+            return
+
+        # 크기 계산
+        favorites_size = self.calculate_scaled_size(9, "font")
+        button_height = self.calculate_scaled_size(30, "height")
+        padding_h = self.calculate_scaled_size(6, "padding")
+        padding_v = self.calculate_scaled_size(4, "padding")
+
+        # 노란색 테마 색상
+        yellow_bg = "#fff8dc" if not self.is_dark_mode else "#3a3a1a"
+        yellow_hover = "#ffebcd" if not self.is_dark_mode else "#4a4a2a"
+        yellow_border = "#daa520" if not self.is_dark_mode else "#8b7500"
+
+        # 즐겨찾기 버튼 생성
+        for symbol, latex, name in self.favorites:
+            # LaTeX 모드에 따라 표시 텍스트 결정
+            if self.latex_mode:
+                display_text = latex  # LaTeX 코드만 표시
+                tooltip_text = f"Symbol: {symbol}\nLaTeX: {latex}\nName: {name}"
+            else:
+                display_text = symbol  # 심볼만 표시  
+                tooltip_text = f"Symbol: {symbol}\nLaTeX: {latex}\nName: {name}"
+            
+            button = DraggableButton(
+                display_text,  # 수정된 부분
+                [symbol, latex, name],
+                parent=self.favorites_container,
+                is_favorite=True
+            )
+            
+            button.setFont(QFont(self.default_font_family, favorites_size))
+            button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            button.setMinimumHeight(button_height)
+            button.setToolTip(f"{tooltip_text}\nRight-click to remove\nDrag to reorder")
+
+            # 스타일 설정 (노란 테마)
+            button.setStyleSheet(
+                f"""
+                QPushButton {{
+                    background-color: {yellow_bg};
+                    color: {THEME['foreground']};
+                    padding: {padding_v}px {padding_h}px;
+                    margin: 2px;
+                    border: 1px solid {yellow_border};
+                    border-radius: 4px;
+                }}
+                QPushButton:hover {{
+                    background-color: {yellow_hover};
+                    border: 1px solid {yellow_border};
+                }}
+            """
+            )
+
+            # 우클릭 메뉴 설정
+            button.setContextMenuPolicy(Qt.CustomContextMenu)
+            button.customContextMenuRequested.connect(
+                lambda pos, s=symbol, l=latex, n=name, btn=button: self.show_favorite_context_menu(
+                    pos, s, l, n, btn
+                )
+            )
+
+            # 클릭 이벤트
+            button.clicked.connect(
+                lambda checked, s=symbol, l=latex, n=name: self.copy_symbol(s, l, n)
+            )
+
+            self.favorites_layout.addWidget(button)
+
+    def show_favorite_context_menu(self, pos, symbol, latex, name, button):
+        """즐겨찾기 우클릭 메뉴"""
+        menu = QMenu(self)
+        menu.setStyleSheet(
+            f"""
+            QMenu {{
+                background-color: {THEME['dark_bg']};
+                color: {THEME['foreground']};
+                border: 1px solid {THEME['accent2']};
+            }}
+            QMenu::item:selected {{
+                background-color: {THEME['button_hover']};
+            }}
+        """
+        )
+
+        remove_action = menu.addAction("Remove from favorites")
+        remove_action.triggered.connect(lambda: self.remove_from_favorites(symbol))
+
+        menu.exec_(button.mapToGlobal(pos))
+
     def create_separator(self):
         """구분선 생성"""
         line = QFrame()
@@ -804,9 +1278,13 @@ class SymbolApp(QMainWindow):
         global THEME
         THEME = DARK_THEME if self.is_dark_mode else LIGHT_THEME
 
-        self.apply_theme()
-        self.apply_theme_to_all_components()
-        self.update_recent_symbols()
+        self.apply_theme()  # 먼저 전체 테마 적용
+        self.apply_theme_to_all_components()  # 개별 컴포넌트 적용
+        self.update_recent_symbols()  # UI 업데이트
+        self.update_favorites_display()  # 즐겨찾기 업데이트
+        
+        # 강제 리페인트
+        self.repaint()
 
         theme_text = "Dark" if self.is_dark_mode else "Light"
         self.statusBar().showMessage(f"Switched to {theme_text} theme", 2000)
@@ -815,6 +1293,7 @@ class SymbolApp(QMainWindow):
         """출력 모드 전환 처리"""
         self.latex_mode = self.latex_mode_radio.isChecked()
         self.update_recent_symbols()
+        self.update_favorites_display()
 
         mode_text = "LaTeX" if self.latex_mode else "Regular"
         self.statusBar().showMessage(f"Switched to {mode_text} mode", 2000)
@@ -830,6 +1309,7 @@ class SymbolApp(QMainWindow):
         self.resized.emit()
         self.calculate_scale_factor()
         self.update_recent_scroll_height()
+        self.update_favorites_scroll_height()
         return super().resizeEvent(event)
 
     def apply_theme(self):
@@ -837,40 +1317,53 @@ class SymbolApp(QMainWindow):
         app = QApplication.instance()
         app.setStyle("Fusion")
 
-        self.setStyleSheet(
-            f"""
-           QMainWindow, QWidget {{
-               background-color: {THEME['background']};
-           }}
-           QMenu {{
-               background-color: {THEME['dark_bg']};
-               color: {THEME['foreground']};
-               border: 1px solid {THEME['button_border']};
-           }}
-           QMenu::item {{
-               padding: 6px 25px 6px 25px;
-           }}
-           QMenu::item:selected {{
-               background-color: {THEME['button_hover']};
-           }}
-           QMenu::separator {{
-               height: 1px;
-               background-color: {THEME['button_border']};
-               margin: 5px 15px 5px 15px;
-           }}
-           QToolTip {{
-               background-color: {THEME['dark_bg']};
-               color: {THEME['foreground']};
-               border: 1px solid {THEME['accent2']};
-               padding: 3px;
-               border-radius: 3px;
-               opacity: 200;
-           }}
-       """
-        )
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {THEME['background']};
+                color: {THEME['foreground']};
+            }}
+            QWidget {{
+                background-color: {THEME['background']};
+                color: {THEME['foreground']};
+            }}
+            QMenu {{
+                background-color: {THEME['dark_bg']};
+                color: {THEME['foreground']};
+                border: 1px solid {THEME['button_border']};
+            }}
+            QMenu::item {{
+                padding: 6px 25px 6px 25px;
+            }}
+            QMenu::item:selected {{
+                background-color: {THEME['button_hover']};
+            }}
+            QMenu::separator {{
+                height: 1px;
+                background-color: {THEME['button_border']};
+                margin: 5px 15px 5px 15px;
+            }}
+            QToolTip {{
+                background-color: {THEME['dark_bg']};
+                color: {THEME['foreground']};
+                border: 1px solid {THEME['accent2']};
+                padding: 3px;
+                border-radius: 3px;
+                opacity: 200;
+            }}
+            QFrame {{
+                background-color: {THEME['background']};
+                color: {THEME['foreground']};
+            }}
+        """)
 
     def apply_theme_to_all_components(self):
         """모든 UI 컴포넌트에 테마 적용"""
+        
+        # 중앙 위젯 배경색 명시적 설정
+        central_widget = self.centralWidget()
+        if central_widget:
+            central_widget.setStyleSheet(f"background-color: {THEME['background']};")
+        
         # 라벨 업데이트
         self.output_mode_label.setStyleSheet(f"color: {THEME['foreground']};")
         self.recent_label.setStyleSheet(f"color: {THEME['foreground']};")
@@ -913,6 +1406,24 @@ class SymbolApp(QMainWindow):
            color: {THEME['foreground']};
        """
         )
+        
+        self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
+        self.favorites_toggle_button.setStyleSheet(f"""
+            QPushButton {{
+                background: transparent;
+                border: none;
+                color: {THEME['foreground']};
+                font-size: 12px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                color: {THEME['accent2']};
+            }}
+        """)
+
+        self.update_favorites_scroll_style()
+        self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
+        self.update_favorites_display()
 
     def update_category_button_styles(self):
         """카테고리 버튼 스타일 업데이트"""
@@ -1034,29 +1545,75 @@ class SymbolApp(QMainWindow):
         name_label.setStyleSheet(f"color: {THEME['foreground']};")
         name_label.setAttribute(Qt.WA_TransparentForMouseEvents)
 
+        # 별표 버튼 추가
+        star_button = QPushButton("★" if self.is_favorited(symbol) else "☆")
+        star_button.setFixedSize(20, 20)
+        star_button.setStyleSheet(
+            f"""
+            QPushButton {{
+                background: transparent;
+                border: none;
+                color: {'#ffd700' if self.is_favorited(symbol) else '#888'};
+                font-size: 14px;
+            }}
+            QPushButton:hover {{
+                color: #ffd700;
+            }}
+        """
+        )
+
+        # 별표 클릭 이벤트
+        star_button.clicked.connect(
+            lambda: self.toggle_favorite(symbol, latex, name, star_button, menu)
+        )
+        star_button.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+
         layout.addWidget(symbol_label)
         layout.addWidget(name_label)
         layout.addStretch()
+        layout.addWidget(star_button)
 
         container.setStyleSheet(
             f"""
-           QWidget {{
-               background-color: {THEME['dark_bg']};
-               border-radius: 3px;
-               border: 1px solid transparent;
-           }}
-           QWidget:hover {{
-               background-color: {THEME['dark_bg']};
-               border: 1px solid {THEME['accent2']};
-           }}
-       """
+            QWidget {{
+                background-color: {THEME['dark_bg']};
+                border-radius: 3px;
+                border: 1px solid transparent;
+            }}
+            QWidget:hover {{
+                background-color: {THEME['dark_bg']};
+                border: 1px solid {THEME['accent2']};
+            }}
+        """
         )
 
         action.setDefaultWidget(container)
         menu.addAction(action)
 
-        container.mousePressEvent = lambda event: self.copy_symbol(symbol, latex, name)
+        # 컨테이너 클릭 이벤트 (별표 클릭 제외)
+        def container_click(event):
+            # 별표 버튼 영역이 아닌 경우에만 복사
+            star_rect = star_button.geometry()
+            if not star_rect.contains(event.pos()):
+                self.copy_symbol(symbol, latex, name)
+
+        container.mousePressEvent = container_click
         return action
+
+    def toggle_favorite(self, symbol, latex, name, star_button, menu):
+        """즐겨찾기 토글"""
+        if self.is_favorited(symbol):
+            self.remove_from_favorites(symbol)
+            star_button.setText("☆")
+            star_button.setStyleSheet(
+                star_button.styleSheet().replace("#ffd700", "#888")
+            )
+        else:
+            self.add_to_favorites(symbol, latex, name)
+            star_button.setText("★")
+            star_button.setStyleSheet(
+                star_button.styleSheet().replace("#888", "#ffd700")
+            )
 
     def copy_symbol(self, symbol, latex, name):
         """심볼 복사 및 최근 사용 목록 업데이트"""
@@ -1103,7 +1660,7 @@ class SymbolApp(QMainWindow):
                     widget.deleteLater()
                 self.recent_layout.removeItem(item)
 
-        # 최근 사용 항목이 없으면 빈 레이블 추가
+        # 최근 사용 항목이 없으면 빈 라벨 추가
         if not self.recent_symbols:
             empty_label = QLabel("None")
             empty_label.setStyleSheet(f"color: {THEME['foreground']};")
@@ -1116,38 +1673,45 @@ class SymbolApp(QMainWindow):
         padding_h = self.calculate_scaled_size(6, "padding")
         padding_v = self.calculate_scaled_size(4, "padding")
 
-        # 최근 사용 항목 버튼 생성
+        # 최근 사용 항목 버튼 생성 (드래그 가능)
         for symbol, latex, name in self.recent_symbols:
-            button = QPushButton()
-
-            # 모드에 따라 표시 내용 설정
+            # LaTeX 모드에 따라 표시 텍스트 결정 (수정된 부분)
             if self.latex_mode:
-                button.setText(latex)
-                button.setToolTip(f"{symbol} | {name}")
+                display_text = latex  # LaTeX 코드만 표시
+                tooltip_text = f"Symbol: {symbol}\nLaTeX: {latex}\nName: {name}"
             else:
-                button.setText(symbol)
-                button.setToolTip(f"{latex} | {name}")
+                display_text = symbol  # 심볼만 표시
+                tooltip_text = f"Symbol: {symbol}\nLaTeX: {latex}\nName: {name}"
+            
+            button = DraggableButton(
+                display_text,  # 수정된 부분
+                [symbol, latex, name],
+                parent=self.recent_container_widget,
+                is_favorite=False
+            )
 
             button.setFont(QFont(self.default_font_family, recent_size))
             button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             button.setMinimumHeight(button_height)
+            
+            # 툴팁에 드래그 힌트 추가
+            tooltip_text += "\nDrag to favorites to save"
+            button.setToolTip(tooltip_text)
 
-            button.setStyleSheet(
-                f"""
-               QPushButton {{
-                   background-color: {THEME['button_bg']};
-                   color: {THEME['foreground']};
-                   padding: {padding_v}px {padding_h}px;
-                   margin: 2px;
-                   border: 1px solid {THEME['button_border']};
-                   border-radius: 4px;
-               }}
-               QPushButton:hover {{
-                   background-color: {THEME['button_hover']};
-                   border: 1px solid {THEME['accent2']};
-               }}
-           """
-            )
+            button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {THEME['button_bg']};
+                    color: {THEME['foreground']};
+                    padding: {padding_v}px {padding_h}px;
+                    margin: 2px;
+                    border: 1px solid {THEME['button_border']};
+                    border-radius: 4px;
+                }}
+                QPushButton:hover {{
+                    background-color: {THEME['button_hover']};
+                    border: 1px solid {THEME['accent2']};
+                }}
+            """)
 
             button.clicked.connect(
                 lambda checked, s=symbol, l=latex, n=name: self.copy_symbol(s, l, n)
@@ -1494,6 +2058,9 @@ def main():
     app.setStyle("Fusion")
 
     window = SymbolApp()
+
+    app.aboutToQuit.connect(window.save_settings)
+
     window.show()
     sys.exit(app.exec_())
 
