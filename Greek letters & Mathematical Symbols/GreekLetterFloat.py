@@ -336,6 +336,8 @@ class SymbolApp(QMainWindow):
         self.favorites = []
         # 즐겨찾기 접기/펼치기 상태
         self.favorites_collapsed = True
+        
+        self.separators = []
 
         # LaTeX 모드 여부
         self.latex_mode = False
@@ -593,7 +595,7 @@ class SymbolApp(QMainWindow):
         layout.setContentsMargins(0, 5, 0, 5)
 
         # 출력 모드 라벨
-        self.output_mode_label = QLabel("Output Mode:")
+        self.output_mode_label = QLabel("Output Mode: ")
         self.output_mode_label.setFont(QFont(self.default_font_family, 10, QFont.Bold))
         self.output_mode_label.setStyleSheet(f"color: {THEME['foreground']};")
         layout.addWidget(self.output_mode_label)
@@ -686,7 +688,7 @@ class SymbolApp(QMainWindow):
         always_on_top_layout.setContentsMargins(5, 5, 5, 5)
         always_on_top_layout.setSpacing(10)  # 고정 간격
 
-        self.always_on_top_label = QLabel("Always on top:")
+        self.always_on_top_label = QLabel("Always on top")
         self.always_on_top_label.setFont(QFont(self.default_font_family, 10))
         self.always_on_top_label.setFixedHeight(25)  # 고정 높이 설정
         self.always_on_top_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -757,7 +759,7 @@ class SymbolApp(QMainWindow):
         dark_mode_layout.setContentsMargins(5, 5, 5, 5)
         dark_mode_layout.setSpacing(10)  # 고정 간격
 
-        self.dark_mode_label = QLabel("Dark mode:")
+        self.dark_mode_label = QLabel("Dark mode")
         self.dark_mode_label.setFont(QFont(self.default_font_family, 10))
         self.dark_mode_label.setFixedHeight(25)  # 고정 높이 설정
         self.dark_mode_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -827,7 +829,7 @@ class SymbolApp(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # 최근 사용 라벨
-        self.recent_label = QLabel("Recently used:")
+        self.recent_label = QLabel("Recently used")
         self.recent_label.setFont(QFont(self.default_font_family, 10, QFont.Bold))
         self.recent_label.setStyleSheet(f"color: {THEME['foreground']};")
         layout.addWidget(self.recent_label)
@@ -889,9 +891,6 @@ class SymbolApp(QMainWindow):
                 lambda: self.add_to_favorites(symbol, latex, name)
             )
 
-        # # 구분선
-        # menu.addSeparator()
-
         # 최근 목록에서 제거
         remove_action = menu.addAction("Remove from recent list")
         remove_action.triggered.connect(lambda: self.remove_from_recent_symbols(symbol))
@@ -909,12 +908,6 @@ class SymbolApp(QMainWindow):
         header_layout = QHBoxLayout(header_container)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(5)
-
-        # 즐겨찾기 라벨
-        self.favorites_label = QLabel("Favorites:")
-        self.favorites_label.setFont(QFont(self.default_font_family, 10, QFont.Bold))
-        self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
-        header_layout.addWidget(self.favorites_label)
 
         # 접기/펼치기 버튼
         self.favorites_toggle_button = QPushButton(
@@ -937,6 +930,12 @@ class SymbolApp(QMainWindow):
         )
         self.favorites_toggle_button.clicked.connect(self.toggle_favorites_section)
         header_layout.addWidget(self.favorites_toggle_button)
+
+        # 즐겨찾기 라벨
+        self.favorites_label = QLabel("Favorites")
+        self.favorites_label.setFont(QFont(self.default_font_family, 10, QFont.Bold))
+        self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
+        header_layout.addWidget(self.favorites_label)
 
         header_layout.addStretch()
         layout.addWidget(header_container)
@@ -1211,11 +1210,11 @@ class SymbolApp(QMainWindow):
 
     def create_separator(self):
         """구분선 생성"""
-        line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
-        line.setStyleSheet(f"background-color: {THEME['background']};")
+        line = QWidget()
+        line.setFixedHeight(1)
+        line.setStyleSheet(f"background-color: {THEME['button_border']};")
         self.main_layout.addWidget(line)
+        self.separators.append(line)
 
     def create_category_buttons(self):
         """카테고리 버튼 생성 - 스크롤 가능"""
@@ -1515,9 +1514,9 @@ class SymbolApp(QMainWindow):
         # 상태바 업데이트
         self.statusBar().setStyleSheet(
             f"""
-          background-color: {THEME['light_bg']};
-          color: {THEME['foreground']};
-      """
+                background-color: {THEME['light_bg']};
+                color: {THEME['foreground']};
+            """
         )
 
         self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
@@ -1535,6 +1534,10 @@ class SymbolApp(QMainWindow):
            }}
        """
         )
+        
+        # 구분선들 업데이트
+        for separator in self.separators:
+            separator.setStyleSheet(f"background-color: {THEME['button_border']};")
 
         self.update_favorites_scroll_style()
         self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
