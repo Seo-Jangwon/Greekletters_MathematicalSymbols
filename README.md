@@ -9,7 +9,7 @@ https://github.com/Seo-Jangwon/Greekletters_MathematicalSymbols/releases/downloa
 - Removed problematic responsive design
 - Previous state is now saved
 
-## Core Features
+## Features
 - Greek Letters & Mathematical Symbols: Easy access to lowercase/uppercase Greek letters and comprehensive mathematical symbols
 - Dual Output Modes: Switch between regular symbol output and LaTeX code output
 - Categories: Organized into 12 categories including Greek letters, script letters, math/engineering symbols, vector/matrix operations, set theory, logic, probability, physics, calculus, AI/ML, and definitions/relationships
