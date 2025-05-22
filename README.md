@@ -1,7 +1,7 @@
 # Greek letters & Mathematical Symbols
 
 ## Download
-[GreekLetters & MathSymbols.exe](https://github.com/Seo-Jangwon/Greekletters_MathematicalSymbols/releases/download/v1.1.0/GreekLetters.MathSymbols.exe)
+[GreekLetters & MathSymbols.exe](https://github.com/Seo-Jangwon/Greekletters_MathematicalSymbols/releases/download/v1.1.1/GreekLetters.MathSymbols.exe)
 
 ## What's New?
 - Added favorites feature
