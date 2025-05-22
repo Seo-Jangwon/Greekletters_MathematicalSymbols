@@ -39,7 +39,7 @@ def get_resource_path(relative_path):
 
 
 # 도쿄나잇 테마 색상
-THEME = {
+DARK_THEME = {
     "background": "#1a1b26",
     "foreground": "#a9b1d6",
     "accent1": "#bb9af7",  # 보라색
@@ -53,6 +53,23 @@ THEME = {
     "button_hover": "#414868",  # 버튼 호버
     "button_border": "#414868",  # 버튼 테두리
 }
+
+LIGHT_THEME = {
+    "background": "#f0f1f5",  # 밝은 배경
+    "foreground": "#343b58",  # 어두운 텍스트
+    "accent1": "#9d7cd8",  # 보라색 (어두운 버전)
+    "accent2": "#5a80db",  # 파란색 (어두운 버전)
+    "accent3": "#79a15e",  # 초록색 (어두운 버전)
+    "accent4": "#d35b78",  # 빨간색 (어두운 버전)
+    "accent5": "#5aacd3",  # 시안색 (어두운 버전)
+    "dark_bg": "#d8dae5",  # 약간 어두운 배경
+    "light_bg": "#e0e2ed",  # 약간 밝은 배경
+    "button_bg": "#e0e2ed",  # 버튼 배경
+    "button_hover": "#c6c9d8",  # 버튼 호버
+    "button_border": "#bbbfd1",  # 버튼 테두리
+}
+
+THEME = LIGHT_THEME
 
 
 # 사용자 정의 QFlowLayout 클래스 구현
@@ -255,10 +272,20 @@ class SymbolApp(QMainWindow):
         # LaTeX 모드 여부
         self.latex_mode = False
 
-        # 기본 폰트 설정
-        self.default_font_family = (
-            "Inter"  # 또는 "Roboto", "Source Sans Pro", "Noto Sans"
-        )
+        # 다크 모드 여부 (기본값은 라이트 모드)
+        self.is_dark_mode = False
+        global THEME
+        THEME = LIGHT_THEME
+
+        # 폰트 설정 - 폰트 우선순위 목록
+        font_options = [
+            "JetBrains Mono",
+            "Inter",
+            "Consolas",
+            "Courier New",
+            "monospace",
+        ]
+        self.default_font_family = self.get_available_font(font_options)
 
         # 기본 크기 설정
         self.base_width = 450
@@ -290,6 +317,23 @@ class SymbolApp(QMainWindow):
             THEME["accent2"],  # 파란색
         ]
         return colors[index % len(colors)]
+
+    def get_available_font(self, font_options):
+        """사용 가능한 첫 번째 폰트 반환"""
+        from PyQt5.QtGui import QFontDatabase
+
+        font_db = QFontDatabase()
+        available_fonts = font_db.families()
+
+        # 사용 가능한 폰트 중 첫 번째 옵션 선택
+        for font in font_options:
+            # Qt는 대소문자를 구분하므로 정확한 일치를 확인
+            for available_font in available_fonts:
+                if font.lower() == available_font.lower():
+                    return available_font
+
+        # 모든 옵션이 없으면 시스템 기본 폰트 사용
+        return font_options[-1]
 
     def calculate_scale_factor(self):
         """화면 크기에 따른 스케일 팩터 계산"""
@@ -325,9 +369,6 @@ class SymbolApp(QMainWindow):
         self.setMinimumSize(350, 500)
         self.setMaximumSize(500, 800)
 
-        # 도쿄나잇 테마 적용
-        self.apply_tokyo_night_theme()
-
         # 중앙 위젯과 레이아웃 생성
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -342,10 +383,10 @@ class SymbolApp(QMainWindow):
         output_mode_layout.setContentsMargins(0, 5, 0, 5)
 
         # 출력 모드 라벨
-        output_mode_label = QLabel("Output Mode:")
-        output_mode_label.setFont(QFont(self.default_font_family, 10, QFont.Bold))
-        output_mode_label.setStyleSheet(f"color: {THEME['foreground']};")
-        output_mode_layout.addWidget(output_mode_label)
+        self.output_mode_label = QLabel("Output Mode:")
+        self.output_mode_label.setFont(QFont(self.default_font_family, 10, QFont.Bold))
+        self.output_mode_label.setStyleSheet(f"color: {THEME['foreground']};")
+        output_mode_layout.addWidget(self.output_mode_label)
 
         # 라디오 버튼 그룹
         self.mode_group = QButtonGroup(self)
@@ -414,7 +455,8 @@ class SymbolApp(QMainWindow):
         # 상태 추적 변수
         self.is_always_on_top = False
         # 스타일 설정
-        self.always_on_top_button.setStyleSheet(f"""
+        self.always_on_top_button.setStyleSheet(
+            f"""
             QPushButton {{
                 background-color: {THEME['button_bg']};
                 color: {THEME['foreground']};
@@ -426,7 +468,8 @@ class SymbolApp(QMainWindow):
             QPushButton:hover {{
                 background-color: {THEME['button_hover']};
             }}
-        """)
+        """
+        )
         output_mode_layout.addWidget(self.always_on_top_button)
 
         self.main_layout.addWidget(output_mode_container)
@@ -437,24 +480,24 @@ class SymbolApp(QMainWindow):
         recent_container_layout.setContentsMargins(0, 0, 0, 0)
 
         # 최근 사용 라벨
-        recent_label = QLabel("Recently used:")
-        recent_label.setFont(QFont(self.default_font_family, 10, QFont.Bold))
-        recent_label.setStyleSheet(f"color: {THEME['foreground']};")
-        recent_container_layout.addWidget(recent_label)
+        self.recent_label = QLabel("Recently used:")
+        self.recent_label.setFont(QFont(self.default_font_family, 10, QFont.Bold))
+        self.recent_label.setStyleSheet(f"color: {THEME['foreground']};")
+        recent_container_layout.addWidget(self.recent_label)
 
         # 스크롤 영역 생성
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setHorizontalScrollBarPolicy(
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(
             Qt.ScrollBarAlwaysOff
         )  # 세로 스크롤만 사용
-        scroll_area.setVerticalScrollBarPolicy(
+        self.scroll_area.setVerticalScrollBarPolicy(
             Qt.ScrollBarAsNeeded
         )  # 필요할 때만 세로 스크롤 표시
-        scroll_area.setFrameShape(QFrame.StyledPanel)  # 테두리 추가
+        self.scroll_area.setFrameShape(QFrame.StyledPanel)  # 테두리 추가
 
         # 스크롤바 스타일 설정
-        scroll_area.setStyleSheet(
+        self.scroll_area.setStyleSheet(
             f"""
             QScrollArea {{
                 border: 1px solid {THEME['button_border']};
@@ -497,14 +540,14 @@ class SymbolApp(QMainWindow):
         self.recent_layout.setContentsMargins(3, 3, 3, 3)  # 약간의 안쪽 여백 추가
 
         # 스크롤 영역에 위젯 설정
-        scroll_area.setWidget(self.recent_container_widget)
+        self.scroll_area.setWidget(self.recent_container_widget)
 
         # 스크롤 영역의 최대 높이 설정 (전체 창 높이의 약 30%)
-        scroll_area.recent_scroll_height_ratio = 0.3
+        self.scroll_area.recent_scroll_height_ratio = 0.3
         self.update_recent_scroll_height()
 
         # 레이아웃에 스크롤 영역 추가
-        recent_container_layout.addWidget(scroll_area)
+        recent_container_layout.addWidget(self.scroll_area)
 
         self.main_layout.addWidget(recent_container)
 
@@ -596,8 +639,32 @@ class SymbolApp(QMainWindow):
             f"""
             background-color: {THEME['light_bg']};
             color: {THEME['foreground']};
-        """
+            """
         )
+
+        # 테마 전환 버튼을 상태바 오른쪽에 추가
+        self.theme_toggle_btn = QPushButton("🌙" if self.is_dark_mode else "☀️")
+        self.theme_toggle_btn.setToolTip("Toggle Dark/Light Theme")
+        self.theme_toggle_btn.setFixedSize(24, 24)
+        self.theme_toggle_btn.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {THEME['button_bg']};
+                color: {THEME['foreground']};
+                border: 1px solid {THEME['button_border']};
+                border-radius: 4px;
+                padding: 2px;
+                font-size: 14px;
+            }}
+            QPushButton:hover {{
+                background-color: {THEME['button_hover']};
+            }}
+            """
+        )
+        self.theme_toggle_btn.clicked.connect(self.toggle_theme)
+        
+        # 상태바에 영구 위젯으로 추가
+        self.statusBar().addPermanentWidget(self.theme_toggle_btn)
 
         # 메뉴 폰트 크기 초기화
         self.symbol_font_size = 16
@@ -608,17 +675,18 @@ class SymbolApp(QMainWindow):
 
         # 반응형 디자인을 위한 이벤트 연결
         self.resized.connect(self.on_resize)
-        
+
     def toggle_always_on_top(self):
         """항상 위에 표시 기능 토글"""
         self.is_always_on_top = not self.is_always_on_top
-        
+
         # 윈도우 플래그 설정
         if self.is_always_on_top:
             # 항상 위에 표시 활성화
             self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
             # 버튼 스타일 변경 (활성화 상태 표시)
-            self.always_on_top_button.setStyleSheet(f"""
+            self.always_on_top_button.setStyleSheet(
+                f"""
                 QPushButton {{
                     background-color: {THEME['accent2']};
                     color: {THEME['dark_bg']};
@@ -630,12 +698,14 @@ class SymbolApp(QMainWindow):
                 QPushButton:hover {{
                     background-color: {THEME['button_hover']};
                 }}
-            """)
+            """
+            )
         else:
             # 항상 위에 표시 비활성화
             self.setWindowFlags(self.windowFlags() & ~Qt.WindowStaysOnTopHint)
             # 버튼 스타일 원래대로 변경
-            self.always_on_top_button.setStyleSheet(f"""
+            self.always_on_top_button.setStyleSheet(
+                f"""
                 QPushButton {{
                     background-color: {THEME['button_bg']};
                     color: {THEME['foreground']};
@@ -647,18 +717,23 @@ class SymbolApp(QMainWindow):
                 QPushButton:hover {{
                     background-color: {THEME['button_hover']};
                 }}
-            """)
-        
+            """
+            )
+
         # 윈도우 플래그가 변경되면 창이 숨겨지므로 다시 표시
         self.show()
-        
+
         # 상태바 메시지 업데이트
-        message = "Always on top: Enabled" if self.is_always_on_top else "Always on top: Disabled"
+        message = (
+            "Always on top: Enabled"
+            if self.is_always_on_top
+            else "Always on top: Disabled"
+        )
         self.statusBar().showMessage(message, 2000)
-        
+
     def update_recent_scroll_height(self):
         """창 크기에 따라 최근 항목 스크롤 영역 높이 업데이트"""
-        if hasattr(self, 'recent_scroll_area'):
+        if hasattr(self, "recent_scroll_area"):
             # 현재 창 높이의 일정 비율로 설정
             new_height = int(self.height() * self.recent_scroll_height_ratio)
             # 최소값과 최대값 제한
@@ -673,9 +748,199 @@ class SymbolApp(QMainWindow):
         self.update_recent_scroll_height()
         return super().resizeEvent(event)
 
+    def toggle_theme(self):
+        """다크 모드와 라이트 모드 전환"""
+        self.is_dark_mode = not self.is_dark_mode
+        
+        # 전역 테마 변수 업데이트
+        global THEME
+        THEME = DARK_THEME if self.is_dark_mode else LIGHT_THEME
+        
+        # 테마 토글 버튼 아이콘 변경
+        self.theme_toggle_btn.setText("🌙" if self.is_dark_mode else "☀️")
+        
+        # 전체 UI 테마 적용
+        self.apply_theme()
+        
+        # 출력 모드 라벨 업데이트
+        self.output_mode_label.setStyleSheet(f"color: {THEME['foreground']};")
+        
+        # 라디오 버튼 업데이트
+        self.regular_mode_radio.setStyleSheet(
+            f"""
+            QRadioButton {{
+                color: {THEME['foreground']};
+                spacing: 5px;
+            }}
+            QRadioButton::indicator {{
+                width: 13px;
+                height: 13px;
+                border-radius: 7px;
+                border: 1px solid {THEME['accent2']};
+            }}
+            QRadioButton::indicator:checked {{
+                background-color: {THEME['accent2']};
+                border: 2px solid {THEME['dark_bg']};
+            }}
+        """
+        )
+        
+        self.latex_mode_radio.setStyleSheet(
+            f"""
+            QRadioButton {{
+                color: {THEME['foreground']};
+                spacing: 5px;
+            }}
+            QRadioButton::indicator {{
+                width: 13px;
+                height: 13px;
+                border-radius: 7px;
+                border: 1px solid {THEME['accent2']};
+            }}
+            QRadioButton::indicator:checked {{
+                background-color: {THEME['accent2']};
+                border: 2px solid {THEME['dark_bg']};
+            }}
+        """
+        )
+        
+        # 최근 사용 라벨 업데이트
+        self.recent_label.setStyleSheet(f"color: {THEME['foreground']};")
+        
+        # 스크롤 영역 스타일 업데이트
+        self.scroll_area.setStyleSheet(
+            f"""
+            QScrollArea {{
+                border: 1px solid {THEME['button_border']};
+                border-radius: 4px;
+                background-color: {THEME['light_bg']};
+            }}
+            QScrollBar:vertical {{
+                border: none;
+                background: {THEME['dark_bg']};
+                width: 8px;
+                margin: 0px 0px 0px 0px;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {THEME['button_border']};
+                min-height: 20px;
+                border-radius: 4px;
+            }}
+            QScrollBar::add-line:vertical {{
+                height: 0px;
+                subcontrol-position: bottom;
+                subcontrol-origin: margin;
+            }}
+            QScrollBar::sub-line:vertical {{
+                height: 0px;
+                subcontrol-position: top;
+                subcontrol-origin: margin;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+        """
+        )
+        
+        # 최근 항목 컨테이너 배경색 업데이트
+        self.recent_container_widget.setStyleSheet(
+            f"background-color: {THEME['light_bg']};"
+        )
+        
+        # 구분선 색상 업데이트
+        self.separator_line = QFrame()
+        self.separator_line.setStyleSheet(f"background-color: {THEME['button_border']};")
 
-    def apply_tokyo_night_theme(self):
-        """도쿄나잇 테마 적용"""
+                
+        # 카테고리 버튼 업데이트
+        for i, button in enumerate(self.category_buttons):
+            border_color = self.get_category_color(i)
+            button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {THEME['button_bg']};
+                    color: {THEME['foreground']};
+                    border: 1px solid {border_color};
+                    border-radius: 4px;
+                    padding-top: 3px;
+                    padding-bottom: 3px;
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    margin-top: 3px;
+                    margin-bottom: 3px;
+                    margin-left: 2px;
+                    margin-right: 2px;
+                    text-align: left;
+                }}
+                QPushButton:hover {{
+                    background-color: {THEME['button_hover']};
+                }}
+                QPushButton:pressed {{
+                    background-color: {border_color};
+                    color: {THEME['dark_bg' if self.is_dark_mode else 'background']};
+                }}
+            """)
+        
+        # Always on Top 버튼 스타일 업데이트
+        if self.is_always_on_top:
+            self.always_on_top_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {THEME['accent2']};
+                    color: {THEME['dark_bg' if self.is_dark_mode else 'background']};
+                    border: 1px solid {THEME['accent2']};
+                    border-radius: 4px;
+                    padding: 2px;
+                    font-size: 14px;
+                }}
+                QPushButton:hover {{
+                    background-color: {THEME['button_hover']};
+                }}
+            """)
+        else:
+            self.always_on_top_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {THEME['button_bg']};
+                    color: {THEME['foreground']};
+                    border: 1px solid {THEME['button_border']};
+                    border-radius: 4px;
+                    padding: 2px;
+                    font-size: 14px;
+                }}
+                QPushButton:hover {{
+                    background-color: {THEME['button_hover']};
+                }}
+            """)
+        
+        # 테마 토글 버튼 스타일 업데이트
+        self.theme_toggle_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {THEME['button_bg']};
+                color: {THEME['foreground']};
+                border: 1px solid {THEME['button_border']};
+                border-radius: 4px;
+                padding: 2px;
+                font-size: 14px;
+            }}
+            QPushButton:hover {{
+                background-color: {THEME['button_hover']};
+            }}
+        """)
+        
+        # 최근 사용 목록 업데이트
+        self.update_recent_symbols()
+        
+        # 상태바 메시지 업데이트
+        theme_text = "Dark" if self.is_dark_mode else "Light"
+        self.statusBar().showMessage(f"Switched to {theme_text} theme", 2000)
+        
+        # 상태바 스타일 업데이트
+        self.statusBar().setStyleSheet(
+            f"""
+            background-color: {THEME['light_bg']};
+            color: {THEME['foreground']};
+            """
+        )
+    def apply_theme(self):
+        """현재 테마 적용"""
         # 애플리케이션 스타일 설정
         app = QApplication.instance()
         app.setStyle("Fusion")
@@ -710,9 +975,8 @@ class SymbolApp(QMainWindow):
                 border-radius: 3px;
                 opacity: 200;
             }}
-        """
+            """
         )
-
     def toggle_output_mode(self):
         """출력 모드 전환 처리"""
         self.latex_mode = self.latex_mode_radio.isChecked()
@@ -790,17 +1054,18 @@ class SymbolApp(QMainWindow):
         for i, button in enumerate(self.category_buttons):
             button.setFont(QFont(self.default_font_family, button_font_size))
             button.setMinimumHeight(button_height)
-            
+
             # 화면 크기에 따른 패딩과 마진 계산
             min_padding_v = max(4, int(5 * scale_factor))
             min_padding_h = max(8, int(10 * scale_factor))
             min_margin = max(2, int(3 * scale_factor))
-            
+
             # 카테고리별 테두리 색상 설정
             border_color = self.get_category_color(i)
-            
+
             # 스타일시트 업데이트
-            button.setStyleSheet(f"""
+            button.setStyleSheet(
+                f"""
                 QPushButton {{
                     background-color: {THEME['button_bg']};
                     color: {THEME['foreground']};
@@ -828,7 +1093,8 @@ class SymbolApp(QMainWindow):
                     background-color: {border_color};
                     color: {THEME['dark_bg']};
                 }}
-            """)
+            """
+            )
 
     def show_symbols_menu(self, create_func, category_index=0):
         # 메뉴 생성
@@ -984,7 +1250,7 @@ class SymbolApp(QMainWindow):
         ]
         for symbol, latex, name in symbols:
             self.create_symbol_menu_item(menu, symbol, latex, name)
-            
+
     def create_script_letters(self, menu):
         symbols = [
             ("𝒜", r"\mathcal{A}", "Script A"),
@@ -1013,15 +1279,15 @@ class SymbolApp(QMainWindow):
             ("𝒳", r"\mathcal{X}", "Script X"),
             ("𝒴", r"\mathcal{Y}", "Script Y"),
             ("𝒵", r"\mathcal{Z}", "Script Z"),
-            ("𝒻", r"\mathcal{f}", "Script f"), # 함수, 확률 밀도 함수
-            ("𝒽", r"\mathcal{h}", "Script h"), # 엔트로피 함수, 플랑크 관련
-            ("𝒾", r"\mathcal{i}", "Script i"), # 허수 단위 변형
-            ("𝓁", r"\mathcal{l}", "Script l"), # 라그랑지안, 손실 함수
-            ("𝓂", r"\mathcal{m}", "Script m"), # 측도(measure)
-            ("𝓃", r"\mathcal{n}", "Script n"), # 수치 함수
-            ("𝓅", r"\mathcal{p}", "Script p"), # 확률 분포
-            ("𝓇", r"\mathcal{r}", "Script r"), # 상관 함수
-            ("𝓉", r"\mathcal{t}", "Script t"), # 시간 함수
+            ("𝒻", r"\mathcal{f}", "Script f"),  # 함수, 확률 밀도 함수
+            ("𝒽", r"\mathcal{h}", "Script h"),  # 엔트로피 함수, 플랑크 관련
+            ("𝒾", r"\mathcal{i}", "Script i"),  # 허수 단위 변형
+            ("𝓁", r"\mathcal{l}", "Script l"),  # 라그랑지안, 손실 함수
+            ("𝓂", r"\mathcal{m}", "Script m"),  # 측도(measure)
+            ("𝓃", r"\mathcal{n}", "Script n"),  # 수치 함수
+            ("𝓅", r"\mathcal{p}", "Script p"),  # 확률 분포
+            ("𝓇", r"\mathcal{r}", "Script r"),  # 상관 함수
+            ("𝓉", r"\mathcal{t}", "Script t"),  # 시간 함수
         ]
         for symbol, latex, name in symbols:
             self.create_symbol_menu_item(menu, symbol, latex, name)
