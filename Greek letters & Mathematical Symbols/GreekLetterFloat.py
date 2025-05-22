@@ -61,7 +61,7 @@ SCALE_LIMITS = {
 WINDOW_SETTINGS = {
     "base_width": 450,
     "base_height": 600,
-    "min_width": 350,
+    "min_width": 300,
     "min_height": 500,
     "max_width": 500,
     "max_height": 800,
@@ -344,11 +344,11 @@ class SymbolApp(QMainWindow):
         self.is_dark_mode = False
 
         # 설정 파일 경로 초기화
-        self.config_file = os.path.join(self.get_config_dir(), 'settings.json')
-        
+        self.config_file = os.path.join(self.get_config_dir(), "settings.json")
+
         # 설정 불러오기 (UI 생성 전에)
         self.load_settings()
-        
+
         # 테마 전역 변수 설정 (UI 생성 전에)
         global THEME
         THEME = DARK_THEME if self.is_dark_mode else LIGHT_THEME
@@ -360,9 +360,6 @@ class SymbolApp(QMainWindow):
 
         # 스케일 팩터 초기화
         self.scale_factor = 1.0
-
-        # UI 컴포넌트 저장용
-        self.category_buttons = []
 
         # UI 생성
         self.init_ui()
@@ -380,24 +377,6 @@ class SymbolApp(QMainWindow):
 
         # 초기 상태 설정
         self.is_always_on_top = False
-
-    def get_category_color(self, index):
-        """카테고리 인덱스에 따른 강조색 반환"""
-        colors = [
-            THEME["accent2"],
-            THEME["accent2"],
-            THEME["accent2"],
-            THEME["accent1"],
-            THEME["accent1"],
-            THEME["accent3"],
-            THEME["accent3"],
-            THEME["accent5"],
-            THEME["accent4"],
-            THEME["accent4"],
-            THEME["accent1"],
-            THEME["accent2"],
-        ]
-        return colors[index % len(colors)]
 
     def get_available_font(self, font_options):
         """사용 가능한 첫 번째 폰트 반환"""
@@ -446,69 +425,69 @@ class SymbolApp(QMainWindow):
         """버튼 스타일 생성 헬퍼 함수"""
         border = border_color or THEME["button_border"]
         return f"""
-           QPushButton {{
-               background-color: {THEME['button_bg']};
-               color: {THEME['foreground']};
-               border: 1px solid {border};
-               border-radius: 4px;
-               padding: {padding_v}px {padding_h}px;
-               margin: {margin}px;
-               text-align: left;
-           }}
-           QPushButton:hover {{
-               background-color: {THEME['button_hover']};
-           }}
-           QPushButton:pressed {{
-               background-color: {border};
-               color: {THEME['dark_bg']};
-           }}
-       """
+          QPushButton {{
+              background-color: {THEME['button_bg']};
+              color: {THEME['foreground']};
+              border: 1px solid {border};
+              border-radius: 4px;
+              padding: {padding_v}px {padding_h}px;
+              margin: {margin}px;
+              text-align: left;
+          }}
+          QPushButton:hover {{
+              background-color: {THEME['button_hover']};
+          }}
+          QPushButton:pressed {{
+              background-color: {border};
+              color: {THEME['dark_bg']};
+          }}
+      """
 
     def create_radio_button_style(self):
         """라디오 버튼 스타일 생성"""
         return f"""
-           QRadioButton {{
-               color: {THEME['foreground']};
-               spacing: 5px;
-           }}
-           QRadioButton::indicator {{
-               width: 13px;
-               height: 13px;
-               border-radius: 7px;
-               border: 1px solid {THEME['accent2']};
-           }}
-           QRadioButton::indicator:checked {{
-               background-color: {THEME['accent2']};
-               border: 2px solid {THEME['dark_bg']};
-           }}
-       """
+          QRadioButton {{
+              color: {THEME['foreground']};
+              spacing: 5px;
+          }}
+          QRadioButton::indicator {{
+              width: 13px;
+              height: 13px;
+              border-radius: 7px;
+              border: 1px solid {THEME['accent2']};
+          }}
+          QRadioButton::indicator:checked {{
+              background-color: {THEME['accent2']};
+              border: 2px solid {THEME['dark_bg']};
+          }}
+      """
 
     def create_scroll_area_style(self):
         """스크롤 영역 스타일 생성"""
         return f"""
-           QScrollArea {{
-               border: 1px solid {THEME['button_border']};
-               border-radius: 4px;
-               background-color: {THEME['light_bg']};
-           }}
-           QScrollBar:vertical {{
-               border: none;
-               background: {THEME['dark_bg']};
-               width: 8px;
-               margin: 0px;
-           }}
-           QScrollBar::handle:vertical {{
-               background: {THEME['button_border']};
-               min-height: 20px;
-               border-radius: 4px;
-           }}
-           QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-               height: 0px;
-           }}
-           QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-               background: none;
-           }}
-       """
+          QScrollArea {{
+              border: 1px solid {THEME['button_border']};
+              border-radius: 4px;
+              background-color: {THEME['light_bg']};
+          }}
+          QScrollBar:vertical {{
+              border: none;
+              background: {THEME['dark_bg']};
+              width: 8px;
+              margin: 0px;
+          }}
+          QScrollBar::handle:vertical {{
+              background: {THEME['button_border']};
+              min-height: 20px;
+              border-radius: 4px;
+          }}
+          QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+              height: 0px;
+          }}
+          QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+              background: none;
+          }}
+      """
 
     def init_ui(self):
         try:
@@ -556,7 +535,7 @@ class SymbolApp(QMainWindow):
 
         # 초기 상태 설정
         self.is_always_on_top = False
-        
+
         if self.latex_mode:
             self.latex_mode_radio.setChecked(True)
         else:
@@ -576,7 +555,7 @@ class SymbolApp(QMainWindow):
         """설정을 JSON 파일로 저장"""
         settings = {
             "favorites": self.favorites,
-            'favorites_collapsed': self.favorites_collapsed,
+            "favorites_collapsed": self.favorites_collapsed,
             "recent_symbols": self.recent_symbols,
             "is_dark_mode": self.is_dark_mode,
             "always_on_top": self.is_always_on_top,
@@ -594,16 +573,16 @@ class SymbolApp(QMainWindow):
         """JSON 파일에서 설정 불러오기"""
         try:
             if os.path.exists(self.config_file):
-                with open(self.config_file, 'r', encoding='utf-8') as f:
+                with open(self.config_file, "r", encoding="utf-8") as f:
                     settings = json.load(f)
-                
-                self.favorites = settings.get('favorites', [])
-                self.favorites_collapsed = settings.get('favorites_collapsed', True)
-                self.recent_symbols = settings.get('recent_symbols', [])
-                self.is_dark_mode = settings.get('is_dark_mode', False)
-                self.is_always_on_top = settings.get('always_on_top', False)
-                self.latex_mode = settings.get('latex_mode', False)
-                
+
+                self.favorites = settings.get("favorites", [])
+                self.favorites_collapsed = settings.get("favorites_collapsed", True)
+                self.recent_symbols = settings.get("recent_symbols", [])
+                self.is_dark_mode = settings.get("is_dark_mode", False)
+                self.is_always_on_top = settings.get("always_on_top", False)
+                self.latex_mode = settings.get("latex_mode", False)
+
         except Exception as e:
             print(f"설정 불러오기 실패: {e}")
 
@@ -646,18 +625,18 @@ class SymbolApp(QMainWindow):
         self.settings_button.clicked.connect(self.show_settings_menu)
         self.settings_button.setStyleSheet(
             f"""
-           QPushButton {{
-               background-color: {THEME['button_bg']};
-               color: {THEME['foreground']};
-               border: 1px solid {THEME['button_border']};
-               border-radius: 4px;
-               padding: 2px;
-               font-size: 16px;
-           }}
-           QPushButton:hover {{
-               background-color: {THEME['button_hover']};
-           }}
-       """
+          QPushButton {{
+              background-color: {THEME['button_bg']};
+              color: {THEME['foreground']};
+              border: 1px solid {THEME['button_border']};
+              border-radius: 4px;
+              padding: 2px;
+              font-size: 16px;
+          }}
+          QPushButton:hover {{
+              background-color: {THEME['button_hover']};
+          }}
+      """
         )
         layout.addWidget(self.settings_button)
 
@@ -670,18 +649,18 @@ class SymbolApp(QMainWindow):
         # 설정 메뉴 스타일
         menu.setStyleSheet(
             f"""
-           QMenu {{
-               background-color: {THEME['dark_bg']};
-               color: {THEME['foreground']};
-               border: 1px solid {THEME['accent2']};
-               padding: 10px;
-               min-width: 200px;
-           }}
-           QMenu::item {{
-               padding: 0px;
-               margin: 0px;
-           }}
-       """
+          QMenu {{
+              background-color: {THEME['dark_bg']};
+              color: {THEME['foreground']};
+              border: 1px solid {THEME['accent2']};
+              padding: 10px;
+              min-width: 200px;
+          }}
+          QMenu::item {{
+              padding: 0px;
+              margin: 0px;
+          }}
+      """
         )
 
         self.create_settings_content(menu)
@@ -713,14 +692,14 @@ class SymbolApp(QMainWindow):
         self.always_on_top_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.always_on_top_label.setStyleSheet(
             f"""
-            QLabel {{
-                color: {THEME['foreground']};
-                background-color: transparent;
-                border: none;
-                padding: 0px;
-                margin: 0px;
-            }}
-            """
+           QLabel {{
+               color: {THEME['foreground']};
+               background-color: transparent;
+               border: none;
+               padding: 0px;
+               margin: 0px;
+           }}
+           """
         )
         # 라벨의 마우스 이벤트 비활성화
         self.always_on_top_label.setAttribute(Qt.WA_TransparentForMouseEvents)
@@ -752,19 +731,19 @@ class SymbolApp(QMainWindow):
 
         always_on_top_container.setStyleSheet(
             f"""
-        QWidget {{
-            background-color: {THEME['dark_bg']};
-            border-radius: 3px;
-            border: 1px solid transparent;
-        }}
-        QWidget:hover {{
-            background-color: {THEME['dark_bg']};
-            border: 1px solid {THEME['accent2']};
-        }}
-        QWidget:hover QLabel {{
-            background-color: {THEME['dark_bg']};
-        }}
-    """
+                QWidget {{
+                    background-color: {THEME['dark_bg']};
+                    border-radius: 3px;
+                    border: 1px solid transparent;
+                }}
+                QWidget:hover {{
+                    background-color: {THEME['dark_bg']};
+                    border: 1px solid {THEME['accent2']};
+                }}
+                QWidget:hover QLabel {{
+                    background-color: {THEME['dark_bg']};
+                }}
+            """
         )
 
         always_on_top_action.setDefaultWidget(always_on_top_container)
@@ -784,14 +763,14 @@ class SymbolApp(QMainWindow):
         self.dark_mode_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.dark_mode_label.setStyleSheet(
             f"""
-            QLabel {{
-                color: {THEME['foreground']};
-                background-color: transparent;
-                border: none;
-                padding: 0px;
-                margin: 0px;
-            }}
-            """
+           QLabel {{
+               color: {THEME['foreground']};
+               background-color: transparent;
+               border: none;
+               padding: 0px;
+               margin: 0px;
+           }}
+           """
         )
         # 라벨의 마우스 이벤트 비활성화
         self.dark_mode_label.setAttribute(Qt.WA_TransparentForMouseEvents)
@@ -823,19 +802,19 @@ class SymbolApp(QMainWindow):
 
         dark_mode_container.setStyleSheet(
             f"""
-        QWidget {{
-            background-color: {THEME['dark_bg']};
-            border-radius: 3px;
-            border: 1px solid transparent;
-        }}
-        QWidget:hover {{
-            background-color: {THEME['dark_bg']};
-            border: 1px solid {THEME['accent2']};
-        }}
-        QWidget:hover QLabel {{
-            background-color: {THEME['dark_bg']};
-        }}
-    """
+                QWidget {{
+                    background-color: {THEME['dark_bg']};
+                    border-radius: 3px;
+                    border: 1px solid transparent;
+                }}
+                QWidget:hover {{
+                    background-color: {THEME['dark_bg']};
+                    border: 1px solid {THEME['accent2']};
+                }}
+                QWidget:hover QLabel {{
+                    background-color: {THEME['dark_bg']};
+                }}
+            """
         )
 
         dark_mode_action.setDefaultWidget(dark_mode_container)
@@ -875,6 +854,50 @@ class SymbolApp(QMainWindow):
         layout.addWidget(self.scroll_area)
         self.main_layout.addWidget(container)
 
+    def remove_from_recent_symbols(self, symbol):
+        """최근 사용 목록에서 제거"""
+        self.recent_symbols = [
+            item for item in self.recent_symbols if item[0] != symbol
+        ]
+        self.update_recent_symbols()
+        self.save_settings()
+        self.statusBar().showMessage(f"Removed '{symbol}' from recent list", 2000)
+
+    def show_recent_context_menu(self, pos, symbol, latex, name, button):
+        """최근 사용 항목 우클릭 메뉴"""
+        menu = QMenu(self)
+        menu.setStyleSheet(
+            f"""
+        QMenu {{
+            background-color: {THEME['dark_bg']};
+            color: {THEME['foreground']};
+            border: 1px solid {THEME['accent2']};
+        }}
+        QMenu::item:selected {{
+            background-color: {THEME['button_hover']};
+        }}
+    """
+        )
+
+        # 즐겨찾기에 추가/제거 옵션
+        if self.is_favorited(symbol):
+            fav_action = menu.addAction("Remove from favorites")
+            fav_action.triggered.connect(lambda: self.remove_from_favorites(symbol))
+        else:
+            fav_action = menu.addAction("Add to favorites")
+            fav_action.triggered.connect(
+                lambda: self.add_to_favorites(symbol, latex, name)
+            )
+
+        # # 구분선
+        # menu.addSeparator()
+
+        # 최근 목록에서 제거
+        remove_action = menu.addAction("Remove from recent list")
+        remove_action.triggered.connect(lambda: self.remove_from_recent_symbols(symbol))
+
+        menu.exec_(button.mapToGlobal(pos))
+
     def create_favorites_section(self):
         """즐겨찾기 섹션 생성"""
         container = QWidget()
@@ -900,17 +923,17 @@ class SymbolApp(QMainWindow):
         self.favorites_toggle_button.setFixedSize(20, 20)
         self.favorites_toggle_button.setStyleSheet(
             f"""
-            QPushButton {{
-                background: transparent;
-                border: none;
-                color: {THEME['foreground']};
-                font-size: 12px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                color: {THEME['accent2']};
-            }}
-        """
+           QPushButton {{
+               background: transparent;
+               border: none;
+               color: {THEME['foreground']};
+               font-size: 12px;
+               font-weight: bold;
+           }}
+           QPushButton:hover {{
+               color: {THEME['accent2']};
+           }}
+       """
         )
         self.favorites_toggle_button.clicked.connect(self.toggle_favorites_section)
         header_layout.addWidget(self.favorites_toggle_button)
@@ -973,29 +996,29 @@ class SymbolApp(QMainWindow):
         yellow_border = "#daa520" if not self.is_dark_mode else "#8b7500"
 
         style = f"""
-            QScrollArea {{
-                border: 1px solid {yellow_border};
-                border-radius: 4px;
-                background-color: {yellow_bg};
-            }}
-            QScrollBar:vertical {{
-                border: none;
-                background: {THEME['dark_bg']};
-                width: 8px;
-                margin: 0px;
-            }}
-            QScrollBar::handle:vertical {{
-                background: {THEME['button_border']};
-                min-height: 20px;
-                border-radius: 4px;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-        """
+           QScrollArea {{
+               border: 1px solid {yellow_border};
+               border-radius: 4px;
+               background-color: {yellow_bg};
+           }}
+           QScrollBar:vertical {{
+               border: none;
+               background: {THEME['dark_bg']};
+               width: 8px;
+               margin: 0px;
+           }}
+           QScrollBar::handle:vertical {{
+               background: {THEME['button_border']};
+               min-height: 20px;
+               border-radius: 4px;
+           }}
+           QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+               height: 0px;
+           }}
+           QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+               background: none;
+           }}
+       """
 
         self.favorites_scroll.setStyleSheet(style)
         self.favorites_container.setStyleSheet(f"background-color: {yellow_bg};")
@@ -1091,7 +1114,9 @@ class SymbolApp(QMainWindow):
         # 즐겨찾기가 없으면 빈 라벨 추가
         if not self.favorites:
             empty_label = QLabel("Drag symbols here or click ★ to add favorites")
-            empty_label.setStyleSheet(f"color: {THEME['foreground']}; font-style: italic;")
+            empty_label.setStyleSheet(
+                f"color: {THEME['foreground']}; font-style: italic;"
+            )
             empty_label.setAlignment(Qt.AlignCenter)
             empty_label.setWordWrap(True)
             self.favorites_layout.addWidget(empty_label)
@@ -1115,16 +1140,16 @@ class SymbolApp(QMainWindow):
                 display_text = latex  # LaTeX 코드만 표시
                 tooltip_text = f"Symbol: {symbol}\nLaTeX: {latex}\nName: {name}"
             else:
-                display_text = symbol  # 심볼만 표시  
+                display_text = symbol  # 심볼만 표시
                 tooltip_text = f"Symbol: {symbol}\nLaTeX: {latex}\nName: {name}"
-            
+
             button = DraggableButton(
                 display_text,  # 수정된 부분
                 [symbol, latex, name],
                 parent=self.favorites_container,
-                is_favorite=True
+                is_favorite=True,
             )
-            
+
             button.setFont(QFont(self.default_font_family, favorites_size))
             button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             button.setMinimumHeight(button_height)
@@ -1133,19 +1158,19 @@ class SymbolApp(QMainWindow):
             # 스타일 설정 (노란 테마)
             button.setStyleSheet(
                 f"""
-                QPushButton {{
-                    background-color: {yellow_bg};
-                    color: {THEME['foreground']};
-                    padding: {padding_v}px {padding_h}px;
-                    margin: 2px;
-                    border: 1px solid {yellow_border};
-                    border-radius: 4px;
-                }}
-                QPushButton:hover {{
-                    background-color: {yellow_hover};
-                    border: 1px solid {yellow_border};
-                }}
-            """
+               QPushButton {{
+                   background-color: {yellow_bg};
+                   color: {THEME['foreground']};
+                   padding: {padding_v}px {padding_h}px;
+                   margin: 2px;
+                   border: 1px solid {yellow_border};
+                   border-radius: 4px;
+               }}
+               QPushButton:hover {{
+                   background-color: {yellow_hover};
+                   border: 1px solid {yellow_border};
+               }}
+           """
             )
 
             # 우클릭 메뉴 설정
@@ -1168,15 +1193,15 @@ class SymbolApp(QMainWindow):
         menu = QMenu(self)
         menu.setStyleSheet(
             f"""
-            QMenu {{
-                background-color: {THEME['dark_bg']};
-                color: {THEME['foreground']};
-                border: 1px solid {THEME['accent2']};
-            }}
-            QMenu::item:selected {{
-                background-color: {THEME['button_hover']};
-            }}
-        """
+           QMenu {{
+               background-color: {THEME['dark_bg']};
+               color: {THEME['foreground']};
+               border: 1px solid {THEME['accent2']};
+           }}
+           QMenu::item:selected {{
+               background-color: {THEME['button_hover']};
+           }}
+       """
         )
 
         remove_action = menu.addAction("Remove from favorites")
@@ -1189,15 +1214,25 @@ class SymbolApp(QMainWindow):
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
-        line.setStyleSheet(f"background-color: {THEME['button_border']};")
+        line.setStyleSheet(f"background-color: {THEME['background']};")
         self.main_layout.addWidget(line)
 
     def create_category_buttons(self):
-        """카테고리 버튼 생성"""
-        container = QWidget()
-        container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.button_layout = QVBoxLayout(container)
+        """카테고리 버튼 생성 - 스크롤 가능"""
+        # 카테고리 스크롤 영역 생성
+        self.category_scroll = QScrollArea()
+        self.category_scroll.setWidgetResizable(True)
+        self.category_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.category_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.category_scroll.setFrameShape(QFrame.StyledPanel)
+        self.category_scroll.setStyleSheet(self.create_scroll_area_style())
+
+        # 카테고리 컨테이너 위젯
+        category_container = QWidget()
+        category_container.setStyleSheet(f"background-color: {THEME['light_bg']};")
+        self.button_layout = QVBoxLayout(category_container)
         self.button_layout.setSpacing(5)
+        self.button_layout.setContentsMargins(5, 5, 5, 5)
 
         categories = [
             ("Lowercase greek letters", self.create_lowercase_greek),
@@ -1214,27 +1249,75 @@ class SymbolApp(QMainWindow):
             ("Definition/Equation/Relationship", self.create_relation_symbols),
         ]
 
+        self.category_buttons = []
         for i, (category_name, create_func) in enumerate(categories):
             button = QPushButton(category_name)
-            button.setFont(QFont(self.default_font_family, 9))
+            button.setFont(QFont(self.default_font_family, 8))
+            button.setFixedHeight(40)  # 고정 높이
             button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            button.setMinimumHeight(30)
+
+            # 카테고리별 색상 적용
+            accent_color = self.get_category_color(i)
+            button.setStyleSheet(
+                f"""
+               QPushButton {{
+                   background-color: {THEME['button_bg']};
+                   color: {THEME['foreground']};
+                   border: 1px solid {accent_color};
+                   border-radius: 4px;
+                   padding: 8px 12px;
+                   margin: 2px;
+                   text-align: left;
+               }}
+               QPushButton:hover {{
+                   background-color: {THEME['button_hover']};
+               }}
+               QPushButton:pressed {{
+                   background-color: {accent_color};
+                   color: {THEME['dark_bg']};
+               }}
+           """
+            )
+
             button.clicked.connect(
                 lambda checked, f=create_func, idx=i: self.show_symbols_menu(f, idx)
             )
+
             self.button_layout.addWidget(button)
             self.category_buttons.append(button)
 
-        self.main_layout.addWidget(container)
+        # 스크롤 영역에 컨테이너 설정
+        self.category_scroll.setWidget(category_container)
+
+        # 메인 레이아웃에 스크롤 영역 추가
+        self.main_layout.addWidget(self.category_scroll)
+
+    def get_category_color(self, index):
+        """카테고리 인덱스에 따른 강조색 반환"""
+        colors = [
+            THEME["accent2"],
+            THEME["accent2"],
+            THEME["accent2"],
+            THEME["accent1"],
+            THEME["accent1"],
+            THEME["accent3"],
+            THEME["accent3"],
+            THEME["accent5"],
+            THEME["accent4"],
+            THEME["accent4"],
+            THEME["accent1"],
+            THEME["accent2"],
+        ]
+        return colors[index % len(colors)]
 
     def create_status_bar(self):
         """상태바 생성"""
         self.statusBar().showMessage("Select a symbol to copy to clipboard")
         self.statusBar().setStyleSheet(
             f"""
-           background-color: {THEME['light_bg']};
-           color: {THEME['foreground']};
-       """
+          background-color: {THEME['light_bg']};
+          color: {THEME['foreground']};
+      """
         )
 
     def container_click_toggle_always_on_top(self, menu):
@@ -1282,7 +1365,7 @@ class SymbolApp(QMainWindow):
         self.apply_theme_to_all_components()  # 개별 컴포넌트 적용
         self.update_recent_symbols()  # UI 업데이트
         self.update_favorites_display()  # 즐겨찾기 업데이트
-        
+
         # 강제 리페인트
         self.repaint()
 
@@ -1317,53 +1400,55 @@ class SymbolApp(QMainWindow):
         app = QApplication.instance()
         app.setStyle("Fusion")
 
-        self.setStyleSheet(f"""
-            QMainWindow {{
-                background-color: {THEME['background']};
-                color: {THEME['foreground']};
-            }}
-            QWidget {{
-                background-color: {THEME['background']};
-                color: {THEME['foreground']};
-            }}
-            QMenu {{
-                background-color: {THEME['dark_bg']};
-                color: {THEME['foreground']};
-                border: 1px solid {THEME['button_border']};
-            }}
-            QMenu::item {{
-                padding: 6px 25px 6px 25px;
-            }}
-            QMenu::item:selected {{
-                background-color: {THEME['button_hover']};
-            }}
-            QMenu::separator {{
-                height: 1px;
-                background-color: {THEME['button_border']};
-                margin: 5px 15px 5px 15px;
-            }}
-            QToolTip {{
-                background-color: {THEME['dark_bg']};
-                color: {THEME['foreground']};
-                border: 1px solid {THEME['accent2']};
-                padding: 3px;
-                border-radius: 3px;
-                opacity: 200;
-            }}
-            QFrame {{
-                background-color: {THEME['background']};
-                color: {THEME['foreground']};
-            }}
-        """)
+        self.setStyleSheet(
+            f"""
+           QMainWindow {{
+               background-color: {THEME['background']};
+               color: {THEME['foreground']};
+           }}
+           QWidget {{
+               background-color: {THEME['background']};
+               color: {THEME['foreground']};
+           }}
+           QMenu {{
+               background-color: {THEME['dark_bg']};
+               color: {THEME['foreground']};
+               border: 1px solid {THEME['button_border']};
+           }}
+           QMenu::item {{
+               padding: 6px 25px 6px 25px;
+           }}
+           QMenu::item:selected {{
+               background-color: {THEME['button_hover']};
+           }}
+           QMenu::separator {{
+               height: 1px;
+               background-color: {THEME['button_border']};
+               margin: 5px 15px 5px 15px;
+           }}
+           QToolTip {{
+               background-color: {THEME['dark_bg']};
+               color: {THEME['foreground']};
+               border: 1px solid {THEME['accent2']};
+               padding: 3px;
+               border-radius: 3px;
+               opacity: 200;
+           }}
+           QFrame {{
+               background-color: {THEME['background']};
+               color: {THEME['foreground']};
+           }}
+       """
+        )
 
     def apply_theme_to_all_components(self):
         """모든 UI 컴포넌트에 테마 적용"""
-        
+
         # 중앙 위젯 배경색 명시적 설정
         central_widget = self.centralWidget()
         if central_widget:
             central_widget.setStyleSheet(f"background-color: {THEME['background']};")
-        
+
         # 라벨 업데이트
         self.output_mode_label.setStyleSheet(f"color: {THEME['foreground']};")
         self.recent_label.setStyleSheet(f"color: {THEME['foreground']};")
@@ -1376,18 +1461,18 @@ class SymbolApp(QMainWindow):
         # 설정 버튼 업데이트
         self.settings_button.setStyleSheet(
             f"""
-           QPushButton {{
-               background-color: {THEME['button_bg']};
-               color: {THEME['foreground']};
-               border: 1px solid {THEME['button_border']};
-               border-radius: 4px;
-               padding: 2px;
-               font-size: 16px;
-           }}
-           QPushButton:hover {{
-               background-color: {THEME['button_hover']};
-           }}
-       """
+          QPushButton {{
+              background-color: {THEME['button_bg']};
+              color: {THEME['foreground']};
+              border: 1px solid {THEME['button_border']};
+              border-radius: 4px;
+              padding: 2px;
+              font-size: 16px;
+          }}
+          QPushButton:hover {{
+              background-color: {THEME['button_hover']};
+          }}
+      """
         )
 
         # 스크롤 영역 업데이트
@@ -1396,72 +1481,73 @@ class SymbolApp(QMainWindow):
             f"background-color: {THEME['light_bg']};"
         )
 
+        # 카테고리 스크롤 영역 업데이트
+        self.category_scroll.setStyleSheet(self.create_scroll_area_style())
+        # 카테고리 컨테이너 업데이트
+        category_container = self.category_scroll.widget()
+        if category_container:
+            category_container.setStyleSheet(f"background-color: {THEME['light_bg']};")
+
         # 카테고리 버튼 스타일 업데이트
-        self.update_category_button_styles()
+        for i, button in enumerate(self.category_buttons):
+            accent_color = self.get_category_color(i)
+            button.setStyleSheet(
+                f"""
+               QPushButton {{
+                   background-color: {THEME['button_bg']};
+                   color: {THEME['foreground']};
+                   border: 1px solid {accent_color};
+                   border-radius: 4px;
+                   padding: 8px 12px;
+                   margin: 2px;
+                   text-align: left;
+               }}
+               QPushButton:hover {{
+                   background-color: {THEME['button_hover']};
+               }}
+               QPushButton:pressed {{
+                   background-color: {accent_color};
+                   color: {THEME['dark_bg']};
+               }}
+           """
+            )
 
         # 상태바 업데이트
         self.statusBar().setStyleSheet(
             f"""
-           background-color: {THEME['light_bg']};
-           color: {THEME['foreground']};
+          background-color: {THEME['light_bg']};
+          color: {THEME['foreground']};
+      """
+        )
+
+        self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
+        self.favorites_toggle_button.setStyleSheet(
+            f"""
+           QPushButton {{
+               background: transparent;
+               border: none;
+               color: {THEME['foreground']};
+               font-size: 12px;
+               font-weight: bold;
+           }}
+           QPushButton:hover {{
+               color: {THEME['accent2']};
+           }}
        """
         )
-        
-        self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
-        self.favorites_toggle_button.setStyleSheet(f"""
-            QPushButton {{
-                background: transparent;
-                border: none;
-                color: {THEME['foreground']};
-                font-size: 12px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                color: {THEME['accent2']};
-            }}
-        """)
 
         self.update_favorites_scroll_style()
         self.favorites_label.setStyleSheet(f"color: {THEME['foreground']};")
         self.update_favorites_display()
 
-    def update_category_button_styles(self):
-        """카테고리 버튼 스타일 업데이트"""
-        for i, button in enumerate(self.category_buttons):
-            border_color = self.get_category_color(i)
-            padding_v = self.calculate_scaled_size(5, "padding")
-            padding_h = self.calculate_scaled_size(10, "padding")
-            margin = self.calculate_scaled_size(3, "padding")
-
-            button.setStyleSheet(
-                self.create_button_style(padding_v, padding_h, margin, border_color)
-            )
-
     def on_resize(self):
         """윈도우 크기에 따라 폰트 및 버튼 크기 조정"""
-        # 폰트 크기 계산
-        base_font_size = self.calculate_scaled_size(
-            SCALE_LIMITS["base_font_size"], "font"
-        )
-        button_font_size = self.calculate_scaled_size(9, "font")
-
         # 메뉴 폰트 크기 계산
         self.symbol_font_size = self.calculate_scaled_size(16, "font")
         self.name_font_size = self.calculate_scaled_size(10, "font")
 
-        # 버튼 높이 계산
-        button_height = self.calculate_scaled_size(30, "height")
-
-        # 카테고리 버튼 업데이트
-        for i, button in enumerate(self.category_buttons):
-            button.setFont(QFont(self.default_font_family, button_font_size))
-            button.setMinimumHeight(button_height)
-
         # 최근 사용 버튼 업데이트
         self.update_recent_buttons_style()
-
-        # 카테고리 버튼 스타일 업데이트
-        self.update_category_button_styles()
 
     def update_recent_buttons_style(self):
         """최근 사용 버튼 스타일 업데이트"""
@@ -1479,19 +1565,19 @@ class SymbolApp(QMainWindow):
                     widget.setMinimumHeight(button_height)
                     widget.setStyleSheet(
                         f"""
-                       QPushButton {{
-                           background-color: {THEME['button_bg']};
-                           color: {THEME['foreground']};
-                           padding: {padding_v}px {padding_h}px;
-                           margin: 2px;
-                           border: 1px solid {THEME['button_border']};
-                           border-radius: 4px;
-                       }}
-                       QPushButton:hover {{
-                           background-color: {THEME['button_hover']};
-                           border: 1px solid {THEME['accent2']};
-                       }}
-                   """
+                      QPushButton {{
+                          background-color: {THEME['button_bg']};
+                          color: {THEME['foreground']};
+                          padding: {padding_v}px {padding_h}px;
+                          margin: 2px;
+                          border: 1px solid {THEME['button_border']};
+                          border-radius: 4px;
+                      }}
+                      QPushButton:hover {{
+                          background-color: {THEME['button_hover']};
+                          border: 1px solid {THEME['accent2']};
+                      }}
+                  """
                     )
 
     def show_symbols_menu(self, create_func, category_index=0):
@@ -1501,19 +1587,19 @@ class SymbolApp(QMainWindow):
 
         menu.setStyleSheet(
             f"""
-           QMenu {{
-               background-color: {THEME['dark_bg']};
-               color: {THEME['foreground']};
-               border: 1px solid {accent_color};
-               padding: 5px;
-           }}
-           QMenu::item {{
-               padding: 8px 25px 8px 25px;
-           }}
-           QMenu::item:selected {{
-               background-color: {THEME['button_hover']};
-           }}
-       """
+          QMenu {{
+              background-color: {THEME['dark_bg']};
+              color: {THEME['foreground']};
+              border: 1px solid {accent_color};
+              padding: 5px;
+          }}
+          QMenu::item {{
+              padding: 8px 25px 8px 25px;
+          }}
+          QMenu::item:selected {{
+              background-color: {THEME['button_hover']};
+          }}
+      """
         )
 
         create_func(menu)
@@ -1550,16 +1636,16 @@ class SymbolApp(QMainWindow):
         star_button.setFixedSize(20, 20)
         star_button.setStyleSheet(
             f"""
-            QPushButton {{
-                background: transparent;
-                border: none;
-                color: {'#ffd700' if self.is_favorited(symbol) else '#888'};
-                font-size: 14px;
-            }}
-            QPushButton:hover {{
-                color: #ffd700;
-            }}
-        """
+           QPushButton {{
+               background: transparent;
+               border: none;
+               color: {'#ffd700' if self.is_favorited(symbol) else '#888'};
+               font-size: 14px;
+           }}
+           QPushButton:hover {{
+               color: #ffd700;
+           }}
+       """
         )
 
         # 별표 클릭 이벤트
@@ -1575,16 +1661,16 @@ class SymbolApp(QMainWindow):
 
         container.setStyleSheet(
             f"""
-            QWidget {{
-                background-color: {THEME['dark_bg']};
-                border-radius: 3px;
-                border: 1px solid transparent;
-            }}
-            QWidget:hover {{
-                background-color: {THEME['dark_bg']};
-                border: 1px solid {THEME['accent2']};
-            }}
-        """
+           QWidget {{
+               background-color: {THEME['dark_bg']};
+               border-radius: 3px;
+               border: 1px solid transparent;
+           }}
+           QWidget:hover {{
+               background-color: {THEME['dark_bg']};
+               border: 1px solid {THEME['accent2']};
+           }}
+       """
         )
 
         action.setDefaultWidget(container)
@@ -1682,36 +1768,45 @@ class SymbolApp(QMainWindow):
             else:
                 display_text = symbol  # 심볼만 표시
                 tooltip_text = f"Symbol: {symbol}\nLaTeX: {latex}\nName: {name}"
-            
+
             button = DraggableButton(
                 display_text,  # 수정된 부분
                 [symbol, latex, name],
                 parent=self.recent_container_widget,
-                is_favorite=False
+                is_favorite=False,
             )
 
             button.setFont(QFont(self.default_font_family, recent_size))
             button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             button.setMinimumHeight(button_height)
-            
+
             # 툴팁에 드래그 힌트 추가
-            tooltip_text += "\nDrag to favorites to save"
+            tooltip_text += "\nDrag to favorites to save\nRight-click for options"
             button.setToolTip(tooltip_text)
 
-            button.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {THEME['button_bg']};
-                    color: {THEME['foreground']};
-                    padding: {padding_v}px {padding_h}px;
-                    margin: 2px;
-                    border: 1px solid {THEME['button_border']};
-                    border-radius: 4px;
-                }}
-                QPushButton:hover {{
-                    background-color: {THEME['button_hover']};
-                    border: 1px solid {THEME['accent2']};
-                }}
-            """)
+            button.setContextMenuPolicy(Qt.CustomContextMenu)
+            button.customContextMenuRequested.connect(
+                lambda pos, s=symbol, l=latex, n=name, btn=button: self.show_recent_context_menu(
+                    pos, s, l, n, btn
+                )
+            )
+
+            button.setStyleSheet(
+                f"""
+               QPushButton {{
+                   background-color: {THEME['button_bg']};
+                   color: {THEME['foreground']};
+                   padding: {padding_v}px {padding_h}px;
+                   margin: 2px;
+                   border: 1px solid {THEME['button_border']};
+                   border-radius: 4px;
+               }}
+               QPushButton:hover {{
+                   background-color: {THEME['button_hover']};
+                   border: 1px solid {THEME['accent2']};
+               }}
+           """
+            )
 
             button.clicked.connect(
                 lambda checked, s=symbol, l=latex, n=name: self.copy_symbol(s, l, n)
