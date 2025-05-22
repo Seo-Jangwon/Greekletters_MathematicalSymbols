@@ -25,4 +25,12 @@ https://github.com/Seo-Jangwon/Greekletters_MathematicalSymbols/releases/downloa
 
 ![image](https://github.com/user-attachments/assets/8516a8f3-62db-4fa7-8b2a-0d18b1374d65)
 
+## contributor
+[BongSangKim](https://github.com/BongSangKim)
 
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Requirements
+- Python 3.6+
+- PyQt5
