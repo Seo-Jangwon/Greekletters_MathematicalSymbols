@@ -2,7 +2,7 @@
 """
 메인 윈도우 클래스 - 모든 구성 요소를 통합
 """
-
+import os
 from PyQt5.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -40,6 +40,10 @@ class SymbolApp(QMainWindow):
         self.is_dark_mode = False
         self.is_always_on_top = False
 
+        # 커스텀 심볼 관련 추가
+        self.custom_categories = []
+        self.all_categories = []
+
         # 관리자 클래스들 초기화
         self.settings_manager = SettingsManager()
         self.ui_builder = UIBuilder(self)
@@ -54,6 +58,9 @@ class SymbolApp(QMainWindow):
 
         # 설정 불러오기
         self.load_settings()
+
+        # 커스텀 심볼 로드
+        self.load_custom_categories()
 
         # UI 생성
         self.init_ui()
@@ -71,6 +78,233 @@ class SymbolApp(QMainWindow):
         # 메뉴 폰트 크기 초기화
         self.symbol_font_size = 16
         self.name_font_size = 10
+
+    def load_custom_categories(self):
+        """커스텀 카테고리 로드"""
+        self.custom_categories, invalid_files = (
+            self.settings_manager.load_custom_symbols()
+        )
+
+        # 에러 파일이 있으면 상태바에 표시
+        if invalid_files:
+            error_count = len(invalid_files)
+            self.statusBar().showMessage(
+                f"Loaded {len(self.custom_categories)} custom categories. {error_count} files have errors.",
+                5000,
+            )
+            print("Invalid custom symbol files:")
+            for filename, error in invalid_files:
+                print(f"  {filename}: {error}")
+        else:
+            if self.custom_categories:
+                self.statusBar().showMessage(
+                    f"Loaded {len(self.custom_categories)} custom categories", 3000
+                )
+
+
+    def update_category_buttons(self):
+        """카테고리 버튼들 업데이트"""
+        # 기존 버튼들 제거
+        for i in reversed(range(self.button_layout.count())):
+            item = self.button_layout.itemAt(i)
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+                self.button_layout.removeItem(item)
+
+        # 현재 테마 가져오기 
+        current_theme = self.style_manager.get_current_theme()
+
+        # 모든 카테고리 가져오기 (고정 + 커스텀)
+        self.all_categories = SymbolData.get_all_categories(self.custom_categories)
+        
+        # 기본 카테고리와 커스텀 카테고리 분리
+        basic_categories = []
+        custom_categories = []
+        
+        for i, category_data in enumerate(self.all_categories):
+            if len(category_data) == 2:  # 고정 카테고리
+                basic_categories.append((i, category_data, False, None))
+            else:  # 커스텀 카테고리
+                category_name, method_name, custom_data = category_data
+                custom_categories.append((i, category_data, True, custom_data))
+
+        # 카테고리 버튼 생성
+        self.category_buttons = []
+        
+        # Basic 카테고리 섹션
+        if basic_categories:
+            basic_label = QLabel("Basic")
+            basic_label.setFont(QFont(self.default_font_family, 8))
+            basic_label.setStyleSheet(f"""
+                QLabel {{
+                    color: {current_theme['foreground']};
+                    font-weight: bold;
+                    padding: 5px 8px 2px 8px;
+                    margin-top: 5px;
+                }}
+            """)
+            self.button_layout.addWidget(basic_label)
+            
+            # Basic 카테고리 버튼들
+            for original_index, category_data, is_custom, custom_data in basic_categories:
+                category_name, method_name = category_data
+                button = self.create_category_button(category_name, method_name, original_index, is_custom, custom_data)
+                self.button_layout.addWidget(button)
+                self.category_buttons.append(button)
+        
+        # 구분선 (Basic과 Custom 사이)
+        if basic_categories and custom_categories:
+            separator = QWidget()
+            separator.setFixedHeight(1)
+            separator.setStyleSheet(f"""
+                QWidget {{
+                    background-color: {current_theme['button_border']};
+                    margin: 8px 5px;
+                }}
+            """)
+            self.button_layout.addWidget(separator)
+        
+        # Custom 카테고리 섹션
+        if custom_categories:
+            custom_label = QLabel("Custom")
+            custom_label.setFont(QFont(self.default_font_family, 8))
+            custom_label.setStyleSheet(f"""
+                QLabel {{
+                    color: {current_theme['foreground']};
+                    font-weight: bold;
+                    padding: 5px 8px 2px 8px;
+                    margin-top: 0px;
+                }}
+            """)
+            self.button_layout.addWidget(custom_label)
+            
+            # Custom 카테고리 버튼들
+            for original_index, category_data, is_custom, custom_data in custom_categories:
+                category_name, method_name, _ = category_data
+                button = self.create_category_button(category_name, method_name, original_index, is_custom, custom_data)
+                self.button_layout.addWidget(button)
+                self.category_buttons.append(button)
+
+        self.button_layout.addStretch(1)
+
+        # 스타일 적용
+        self.apply_category_button_styles()
+
+    def create_category_button(self, category_name, method_name, original_index, is_custom, custom_data):
+        """카테고리 버튼 생성 헬퍼 메서드"""
+        button = QPushButton(category_name)
+        button.setFont(QFont(self.default_font_family, 8))
+        button.setFixedHeight(40)
+        button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        # 이벤트 연결
+        if is_custom:
+            button.clicked.connect(
+                lambda checked, data=custom_data, idx=original_index: self.show_custom_symbols_menu(data, idx)
+            )
+        else:
+            button.clicked.connect(
+                lambda checked, method=method_name, idx=original_index: self.show_symbols_menu(method, idx)
+            )
+
+        return button
+
+    def apply_category_button_styles(self):
+        """카테고리 버튼 스타일 적용"""
+        if not hasattr(self, 'category_buttons'):
+            return
+        
+        # 전체 카테고리 정보 다시 가져오기 (색상 매핑용)
+        all_categories_for_color = SymbolData.get_all_categories(self.custom_categories)
+        
+        button_index = 0
+        for i, category_data in enumerate(all_categories_for_color):
+            if button_index >= len(self.category_buttons):
+                break
+                
+            # 커스텀 카테고리인 경우 색상 가져오기
+            if len(category_data) == 3:  # 커스텀 카테고리
+                custom_data = category_data[2]
+                color = custom_data.get('category_info', {}).get('color', '#7aa2f7')
+            else:  # 고정 카테고리
+                color = self.style_manager.get_category_color(i)
+            
+            # 해당하는 버튼에 스타일 적용
+            if button_index < len(self.category_buttons):
+                self.category_buttons[button_index].setStyleSheet(
+                    self.style_manager.create_category_button_style(color)
+                )
+                button_index += 1
+
+    def show_custom_symbols_menu(self, custom_data, category_index=0):
+        """커스텀 심볼 메뉴 표시"""
+        menu = QMenu(self)
+
+        # 커스텀 카테고리 색상 가져오기
+        accent_color = custom_data.get("category_info", {}).get("color", "#7aa2f7")
+
+        menu.setStyleSheet(
+            f"""
+            QMenu {{
+                background-color: {self.style_manager.current_theme['dark_bg']};
+                color: {self.style_manager.current_theme['foreground']};
+                border: 1px solid {accent_color};
+                padding: 5px;
+            }}
+            QMenu::item {{
+                padding: 8px 25px 8px 25px;
+            }}
+            QMenu::item:selected {{
+                background-color: {self.style_manager.current_theme['button_hover']};
+            }}
+        """
+        )
+
+        # 커스텀 심볼 데이터 가져오기
+        from symbol_data import SymbolData
+
+        symbols = SymbolData.get_custom_category_symbols(custom_data)
+
+        for symbol, latex, name in symbols:
+            self.create_symbol_menu_item(menu, symbol, latex, name)
+
+        # 메뉴 표시
+        button = self.sender()
+        if button:
+            pos = button.mapToGlobal(QPoint(button.width(), 0))
+            menu.exec_(pos)
+
+    def add_custom_category(self):
+        """새 커스텀 카테고리 템플릿 생성"""
+        try:
+            template_path = self.settings_manager.create_new_category_template()
+            filename = os.path.basename(template_path)
+
+            self.statusBar().showMessage(
+                f"Created template: {filename}.", 5000
+            )
+
+            # 선택적으로 폴더 열기
+            self.settings_manager.open_custom_symbols_folder()
+
+        except Exception as e:
+            self.statusBar().showMessage(f"Error creating template: {str(e)}", 5000)
+
+    def edit_custom_symbols(self):
+        """커스텀 심볼 폴더 열기"""
+        success = self.settings_manager.open_custom_symbols_folder()
+        if success:
+            self.statusBar().showMessage("Opened custom symbols folder", 2000)
+        else:
+            self.statusBar().showMessage("Failed to open folder", 3000)
+
+    def reload_custom_symbols(self):
+        """커스텀 심볼 다시 로드"""
+        self.load_custom_categories()
+        self.update_category_buttons()
+        self.statusBar().showMessage("Custom symbols reloaded", 2000)
 
     def init_ui(self):
         """UI 초기화"""
@@ -96,6 +330,7 @@ class SymbolApp(QMainWindow):
         # 초기 데이터 업데이트
         self.update_recent_symbols()
         self.update_favorites_display()
+        self.update_category_buttons()
 
     def load_settings(self):
         """설정 불러오기"""
@@ -150,6 +385,11 @@ class SymbolApp(QMainWindow):
 
         self.update_recent_symbols()
         self.update_favorites_display()
+        self.apply_category_button_styles()
+        
+        if hasattr(self, 'category_buttons'):
+            self.update_category_buttons()
+        
         self.repaint()
 
     def resizeEvent(self, event: QResizeEvent):
@@ -424,7 +664,6 @@ class SymbolApp(QMainWindow):
         container.mousePressEvent = container_click
         return action
 
-    # 이벤트 핸들러들을 위임
     def toggle_output_mode(self):
         self.event_handlers.toggle_output_mode()
 

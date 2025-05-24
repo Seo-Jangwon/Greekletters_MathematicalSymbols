@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QFont, QIcon
 from components import QFlowLayout, FavoritesDropZone, ToggleSwitch
-from constants import SCALE_LIMITS, CATEGORY_COLORS
+from constants import SCALE_LIMITS, CATEGORY_COLORS, CONTAINER_SETTINGS
 from settings_manager import SettingsManager
 
 
@@ -120,6 +120,12 @@ class UIBuilder:
 
         # 스크롤 없는 컨테이너 위젯 (배경 스타일만 적용)
         recent_container_widget = QWidget()
+
+        # 최소 높이 설정 적용
+        recent_container_widget.setMinimumHeight(
+            CONTAINER_SETTINGS["recent_min_height"]
+        )
+
         recent_container_widget.setStyleSheet(
             f"""
             background-color: {self._get_current_theme()['light_bg']};
@@ -131,7 +137,6 @@ class UIBuilder:
 
         recent_layout = QFlowLayout(recent_container_widget)
         recent_layout.setContentsMargins(3, 3, 3, 3)
-        recent_container_widget.setMinimumHeight(50)
 
         layout.addWidget(recent_container_widget)
 
@@ -175,14 +180,18 @@ class UIBuilder:
         header_layout.addStretch()
         layout.addWidget(header_container)
 
-        # 즐겨찾기 컨테이너 (드롭 존) - 배경색을 확실히 보이게 하기 위해 초기 스타일 설정
+        # 즐겨찾기 컨테이너 (드롭 존)
         favorites_container = FavoritesDropZone(self.main_window)
-        
+
+        # 최소 높이 설정 적용
+        favorites_container.setMinimumHeight(CONTAINER_SETTINGS["favorites_min_height"])
+
         # 초기 배경색 설정 (나중에 style_manager에서 덮어씀)
         initial_bg = "#fffacd" if not self.main_window.is_dark_mode else "#3a3a2a"
         initial_border = "#daa520" if not self.main_window.is_dark_mode else "#8b7500"
-        
-        favorites_container.setStyleSheet(f"""
+
+        favorites_container.setStyleSheet(
+            f"""
             QWidget {{
                 background-color: {initial_bg};
                 border: 2px solid {initial_border};
@@ -190,15 +199,15 @@ class UIBuilder:
                 padding: 8px;
                 margin: 2px;
             }}
-        """)
+        """
+        )
 
         favorites_layout = QFlowLayout(favorites_container)
         favorites_layout.setContentsMargins(5, 5, 5, 5)
 
         # 초기 접기/펼치기 상태 적용
         favorites_container.setVisible(not self.main_window.favorites_collapsed)
-        favorites_container.setMinimumHeight(50)
-        
+
         layout.addWidget(favorites_container)
 
         # 참조 저장
@@ -207,20 +216,97 @@ class UIBuilder:
 
         return container
 
+    def create_custom_symbols_controls(self):
+        """커스텀 심볼 관리 버튼들 생성"""
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 5, 0, 5)
+        
+        # Custom Symbols 라벨
+        custom_label = QLabel("Categories")
+        custom_label.setFont(QFont(self.main_window.default_font_family, 10, QFont.Bold))
+        layout.addWidget(custom_label)
+        
+        layout.addStretch()
+        
+        # 버튼 스타일 정의
+        button_style = self.create_control_button_style()
+        
+        # Add 버튼
+        add_button = QPushButton("Add")
+        add_button.setFixedSize(60, 25)
+        add_button.setToolTip("Create new custom category template")
+        add_button.setStyleSheet(button_style)
+        add_button.clicked.connect(self.main_window.add_custom_category)
+        layout.addWidget(add_button)
+        
+        # Edit 버튼  
+        edit_button = QPushButton("Edit")
+        edit_button.setFixedSize(60, 25)
+        edit_button.setToolTip("Open custom symbols folder")
+        edit_button.setStyleSheet(button_style)
+        edit_button.clicked.connect(self.main_window.edit_custom_symbols)
+        layout.addWidget(edit_button)
+        
+        # Reload 버튼
+        reload_button = QPushButton("↻")
+        reload_button.setFixedSize(25, 25)
+        reload_button.setToolTip("Reload custom symbols")
+        reload_button.setStyleSheet(button_style.replace('padding: 4px 8px;', 'padding: 4px;'))
+        reload_button.clicked.connect(self.main_window.reload_custom_symbols)
+        layout.addWidget(reload_button)
+        
+        # 참조 저장
+        self.main_window.add_custom_button = add_button
+        self.main_window.edit_custom_button = edit_button
+        self.main_window.reload_custom_button = reload_button
+        
+        return container
+
+    def create_control_button_style(self):
+        """Add/Edit/Reload 버튼 스타일 생성"""
+        theme = self._get_current_theme()
+        return f"""
+            QPushButton {{
+                background-color: {theme['button_bg']};
+                color: {theme['foreground']};
+                border: 1px solid {theme['button_border']};
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-family: {self.main_window.default_font_family};
+                font-size: 8pt;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {theme['button_hover']};
+                border: 1px solid {theme['accent2']};
+            }}
+            QPushButton:pressed {{
+                background-color: {theme['accent2']};
+                color: {theme['dark_bg']};
+            }}
+        """
+
     def create_category_buttons(self):
         """카테고리 버튼 생성 - 스크롤 가능"""
+        main_container = QWidget()
+        main_layout = QVBoxLayout(main_container)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(5)
+
+        # 커스텀 심볼 관리 버튼들 추가
+        main_layout.addWidget(self.create_custom_symbols_controls())
+
         # 카테고리 스크롤 영역 생성
         category_scroll = QScrollArea()
         category_scroll.setWidgetResizable(True)
         category_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         category_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         category_scroll.setFrameShape(QFrame.StyledPanel)
-        # 스타일 적용 추가
         category_scroll.setStyleSheet(self._create_scroll_area_style())
 
         # 카테고리 컨테이너 위젯
         category_container = QWidget()
-        # 컨테이너 스타일 적용 추가
         category_container.setStyleSheet(
             f"background-color: {self._get_current_theme()['light_bg']};"
         )
@@ -228,34 +314,19 @@ class UIBuilder:
         button_layout.setSpacing(5)
         button_layout.setContentsMargins(5, 5, 5, 5)
 
-        from symbol_data import SymbolData
-
-        category_buttons = []
-        for i, (category_name, method_name) in enumerate(SymbolData.CATEGORIES):
-            button = QPushButton(category_name)
-            button.setFont(QFont(self.main_window.default_font_family, 8))
-            button.setFixedHeight(40)
-            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-            # 이벤트 연결 - lambda의 기본값 바인딩 사용
-            button.clicked.connect(
-                lambda checked, method=method_name, idx=i: self.main_window.show_symbols_menu(
-                    method, idx
-                )
-            )
-
-            button_layout.addWidget(button)
-            category_buttons.append(button)
+        # 카테고리 버튼들은 main_window에서 동적으로 업데이트
+        self.main_window.category_container = category_container
+        self.main_window.button_layout = button_layout
 
         # 스크롤 영역에 컨테이너 설정
         category_scroll.setWidget(category_container)
 
+        main_layout.addWidget(category_scroll)
+
         # 참조 저장
         self.main_window.category_scroll = category_scroll
-        self.main_window.button_layout = button_layout
-        self.main_window.category_buttons = category_buttons
 
-        return category_scroll
+        return main_container
 
     def create_separator(self):
         """구분선 생성"""

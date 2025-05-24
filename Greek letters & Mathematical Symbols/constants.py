@@ -18,6 +18,13 @@ SCALE_LIMITS = {
     "max_favorites": 1000,
 }
 
+# 컨테이너 설정 
+CONTAINER_SETTINGS = {
+    "recent_min_height": 50,
+    "favorites_min_height": 50,
+    "button_min_height": 30,
+}
+
 # 윈도우 설정
 WINDOW_SETTINGS = {
     "base_width": 450,
@@ -76,20 +83,18 @@ FAVORITES_COLORS = {
     },
 }
 
-# 카테고리별 색상 매핑
+# 카테고리별 색상 매핑 (고정 카테고리용)
 CATEGORY_COLORS = [
-    "accent2",
-    "accent2",
-    "accent2",
-    "accent1",
-    "accent1",
-    "accent3",
-    "accent3",
+    "accent2",  # 소문자 그리스
+    "accent2",  # 대문자 그리스
+    "accent3",  # 나머지는 커스텀에서 지정
+    "accent4",
     "accent5",
-    "accent4",
-    "accent4",
     "accent1",
     "accent2",
+    "accent3",
+    "accent4",
+    "accent5",
 ]
 
 # 폰트 우선순위
