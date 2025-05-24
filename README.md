@@ -3,7 +3,7 @@
 ## Download
 [GreekLetters & MathSymbols 1.2.0](https://github.com/Seo-Jangwon/Greekletters_MathematicalSymbols/releases/download/v2.0.0/GreekLetters.MathSymbols.1.2.0.exe)
 
-[GreekLetters & MathSymbols 2.0.0](https://github.com/Seo-Jangwon/Greekletters_MathematicalSymbols/releases/download/v2.0.0/GreekLetters.MathSymbols.2.0.0.exe)
+[GreekLetters & MathSymbols 2.0.0](https://github.com/Seo-Jangwon/Greekletters_MathematicalSymbols/releases/download/v2.0.0/GreekLetters.MathSymbols.2.0.0.exe) ← New version
 
 
 ## What's New in v2.0.0?
