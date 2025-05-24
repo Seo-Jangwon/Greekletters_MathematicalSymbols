@@ -3,7 +3,7 @@
 테마 및 스타일 관리
 """
 
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel
 from PyQt5.QtGui import QFont
 from constants import (
     DARK_THEME,
@@ -406,3 +406,44 @@ class StyleManager:
                         }}
                     """
                     )
+
+    def update_category_section_styles(self):
+        """카테고리 섹션의 스타일만 업데이트"""
+        # Add/Edit/Reload 버튼들 업데이트
+        if hasattr(self.main_window, "add_custom_button"):
+            button_style = self.main_window.ui_builder.create_control_button_style()
+            self.main_window.add_custom_button.setStyleSheet(button_style)
+            self.main_window.edit_custom_button.setStyleSheet(button_style)
+            reload_style = button_style.replace("padding: 4px 8px;", "padding: 4px;")
+            self.main_window.reload_custom_button.setStyleSheet(reload_style)
+
+        # Basic, Custom 라벨들 업데이트
+        # button_layout 내의 모든 QLabel 찾아서 업데이트
+        if hasattr(self.main_window, "button_layout"):
+            for i in range(self.main_window.button_layout.count()):
+                item = self.main_window.button_layout.itemAt(i)
+                if item and item.widget():
+                    widget = item.widget()
+                    if isinstance(widget, QLabel):
+                        widget.setStyleSheet(
+                            f"""
+                            QLabel {{
+                                color: {self.current_theme['foreground']};
+                                font-weight: bold;
+                                padding: 5px 8px 2px 8px;
+                                margin-top: 5px;
+                            }}
+                        """
+                        )
+                    elif (
+                        isinstance(widget, QWidget)
+                        and widget.objectName() == "category_separator"
+                    ):
+                        widget.setStyleSheet(
+                            f"""
+                            QWidget {{
+                                background-color: {self.current_theme['button_border']};
+                                margin: 8px 5px;
+                            }}
+                        """
+                        )

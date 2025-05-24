@@ -157,6 +157,7 @@ class SymbolApp(QMainWindow):
         # 구분선 (Basic과 Custom 사이)
         if basic_categories and custom_categories:
             separator = QWidget()
+            separator.setObjectName("category_separator")
             separator.setFixedHeight(1)
             separator.setStyleSheet(f"""
                 QWidget {{
@@ -386,10 +387,8 @@ class SymbolApp(QMainWindow):
         self.update_recent_symbols()
         self.update_favorites_display()
         self.apply_category_button_styles()
-        
-        if hasattr(self, 'category_buttons'):
-            self.update_category_buttons()
-        
+        self.style_manager.update_category_section_styles()
+    
         self.repaint()
 
     def resizeEvent(self, event: QResizeEvent):
