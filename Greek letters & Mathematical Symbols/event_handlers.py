@@ -292,6 +292,7 @@ class EventHandlers:
             button_pos.x() - menu_width + button_width, button_pos.y()
         )
         
+        self.current_settings_menu = menu
         menu.exec_(adjusted_pos)
 
     def create_settings_content(self, menu):
@@ -374,5 +375,8 @@ class EventHandlers:
         self.main_window.theme_switch.setChecked(
             not self.main_window.theme_switch.isChecked()
         )
+        if hasattr(self, 'current_settings_menu'):
+            self.current_settings_menu.close()
+    
         self.toggle_theme()
-        # QTimer.singleShot(100, self.show_settings_menu)
+        QTimer.singleShot(100, self.show_settings_menu)

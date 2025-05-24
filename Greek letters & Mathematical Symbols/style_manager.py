@@ -417,33 +417,36 @@ class StyleManager:
             reload_style = button_style.replace("padding: 4px 8px;", "padding: 4px;")
             self.main_window.reload_custom_button.setStyleSheet(reload_style)
 
-        # Basic, Custom 라벨들 업데이트
-        # button_layout 내의 모든 QLabel 찾아서 업데이트
+        # Basic, Custom 라벨들 및 구분선 업데이트
         if hasattr(self.main_window, "button_layout"):
             for i in range(self.main_window.button_layout.count()):
                 item = self.main_window.button_layout.itemAt(i)
                 if item and item.widget():
                     widget = item.widget()
-                    if isinstance(widget, QLabel):
-                        widget.setStyleSheet(
-                            f"""
+                    
+                    # 라벨 색상 업데이트
+                    if isinstance(widget, QLabel) and widget.text() in ["Basic", "Custom"]:
+                        # Basic은 foreground, Custom은 accent4 사용
+                        if widget.text() == "Basic":
+                            color = self.current_theme["accent2"]
+                        else:  # Custom
+                            color = self.current_theme["accent1"]
+
+                        widget.setStyleSheet(f"""
                             QLabel {{
-                                color: {self.current_theme['foreground']};
+                                color: {color};
                                 font-weight: bold;
                                 padding: 5px 8px 2px 8px;
                                 margin-top: 5px;
                             }}
-                        """
-                        )
-                    elif (
-                        isinstance(widget, QWidget)
-                        and widget.objectName() == "category_separator"
-                    ):
-                        widget.setStyleSheet(
-                            f"""
+                        """)
+                    
+                    # 구분선 색상 업데이트
+                    elif (isinstance(widget, QWidget) and 
+                        widget.objectName() == "category_separator"):
+                        widget.setStyleSheet(f"""
                             QWidget {{
                                 background-color: {self.current_theme['button_border']};
                                 margin: 8px 5px;
                             }}
-                        """
-                        )
+                        """)
