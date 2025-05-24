@@ -34,10 +34,6 @@
 - **File Validation**: Automatic structure checking ensures stability
 - **Documentation**: Built-in README.md with examples and color codes
 
-## What's New in v1.2.0?
-- Added favorites feature
-- Removed problematic responsive design
-- Previous state is now saved
 
 ## Features in v2.0.0
 
